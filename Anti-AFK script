@@ -1,0 +1,13 @@
+local VirtualUser = game:GetService('VirtualUser')
+
+game:GetService('Players').LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "成功防斷線!",
+    Text = "作者未知",
+    Button1 = "謝謝",
+    Duration = 5
+})
