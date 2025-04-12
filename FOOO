@@ -1,0 +1,230 @@
+-- ✅ 自動招架 + 自動轉身 + 自動移動 + GUI 切換 + 十字準心
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local Player = Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ParryToggleUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = Player:WaitForChild("PlayerGui")
+
+local Enabled = false
+local AutoDash = true
+local Cooldown = tick()
+local Parried = false
+local Connection = nil
+
+-- 找球
+local function GetBall()
+    for _, Ball in ipairs(workspace.Balls:GetChildren()) do
+        if Ball:GetAttribute("realBall") then
+            return Ball
+        end
+    end
+end
+
+-- 重置事件連接
+local function ResetConnection()
+    if Connection then
+        Connection:Disconnect()
+        Connection = nil
+    end
+end
+
+-- 主迴圈：自動轉向、自動衝刺、自動招架
+RunService.Heartbeat:Connect(function()
+    if not Enabled then return end
+
+    local Ball = GetBall()
+    local Character = Player.Character
+    local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+    if not Ball or not HRP then return end
+
+    local targetPos = Ball.Position
+    local currentPos = HRP.Position
+
+    -- 自動轉向
+    HRP.CFrame = CFrame.lookAt(currentPos, Vector3.new(targetPos.X, currentPos.Y, targetPos.Z))
+
+    -- 自動招架
+    local Speed = Ball.zoomies.VectorVelocity.Magnitude
+    local Distance = (HRP.Position - Ball.Position).Magnitude
+    if Ball:GetAttribute("target") == Player.Name and not Parried and Distance / Speed <= 0.65 then
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        Parried = true
+        Cooldown = tick()
+    end
+    if tick() - Cooldown >= 1 then
+        Parried = false
+    end
+
+    -- 自動移動（距離大於5才移動）
+    if AutoDash and Distance > 5 then
+        local moveDir = (targetPos - currentPos).Unit
+        local step = 0.7
+        HRP.CFrame = HRP.CFrame + (moveDir * step)
+    end
+end)
+
+-- 有新球時監聽 target 屬性
+workspace.Balls.ChildAdded:Connect(function()
+    local Ball = GetBall()
+    if not Ball then return end
+    ResetConnection()
+    Connection = Ball:GetAttributeChangedSignal("target"):Connect(function()
+        Parried = false
+    end)
+end)
+
+-- 黑色底板
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 140, 0, 50)
+MainFrame.Position = UDim2.new(0, 10, 0, 10)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = screenGui
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+-- Toggle 框
+local ToggleFrame = Instance.new("Frame")
+ToggleFrame.Size = UDim2.new(0, 60, 0, 30)
+ToggleFrame.Position = UDim2.new(0, 10, 0, 10)
+ToggleFrame.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+ToggleFrame.BorderSizePixel = 0
+ToggleFrame.Name = "ToggleBackground"
+ToggleFrame.Parent = MainFrame
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 15)
+ToggleCorner.Parent = ToggleFrame
+
+-- 圓鈕
+local Knob = Instance.new("Frame")
+Knob.Size = UDim2.new(0, 26, 0, 26)
+Knob.Position = UDim2.new(0, 2, 0, 2)
+Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Knob.BorderSizePixel = 0
+Knob.Name = "Knob"
+Knob.ZIndex = 2
+Knob.Parent = ToggleFrame
+local KnobCorner = Instance.new("UICorner")
+KnobCorner.CornerRadius = UDim.new(0, 13)
+KnobCorner.Parent = Knob
+
+-- 標籤
+local Label = Instance.new("TextLabel")
+Label.Size = UDim2.new(0, 50, 1, 0)
+Label.Position = UDim2.new(0, 70, 0, 0)
+Label.Text = "關閉"
+Label.TextColor3 = Color3.new(1, 1, 1)
+Label.BackgroundTransparency = 1
+Label.TextScaled = true
+Label.Font = Enum.Font.SourceSans
+Label.Parent = MainFrame
+
+-- 點擊區域
+local ClickArea = Instance.new("TextButton")
+ClickArea.Size = UDim2.new(1, 0, 1, 0)
+ClickArea.BackgroundTransparency = 1
+ClickArea.Text = ""
+ClickArea.Parent = ToggleFrame
+ClickArea.MouseButton1Click:Connect(function()
+    Enabled = not Enabled
+    if Enabled then
+        Knob:TweenPosition(UDim2.new(0, 55, 0, 2), "Out", "Sine", 0.2, true)
+        ToggleFrame.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
+        Label.Text = "開啟"
+    else
+        Knob:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Sine", 0.2, true)
+        ToggleFrame.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        Label.Text = "關閉"
+    end
+end)
+
+-- 最小化按鈕
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Parent = MainFrame
+minimizeButton.Size = UDim2.new(0, 25, 0, 25)
+minimizeButton.Position = UDim2.new(1, -30, 0, 0)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+minimizeButton.Text = "_"
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.TextSize = 16
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.BorderSizePixel = 0
+
+local minimizeCorner = Instance.new("UICorner")
+minimizeCorner.CornerRadius = UDim.new(0, 8)
+minimizeCorner.Parent = minimizeButton
+
+-- 圓角小方塊
+local minimizedBox = Instance.new("Frame")
+minimizedBox.Parent = screenGui
+minimizedBox.Size = UDim2.new(0, 60, 0, 60)
+minimizedBox.Position = MainFrame.Position
+minimizedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+minimizedBox.Visible = false
+
+local minimizedBoxCorner = Instance.new("UICorner")
+minimizedBoxCorner.CornerRadius = UDim.new(0, 8)
+minimizedBoxCorner.Parent = minimizedBox
+
+local minimizeLabel = Instance.new("TextLabel")
+minimizeLabel.Parent = minimizedBox
+minimizeLabel.Size = UDim2.new(1, 0, 1, 0)
+minimizeLabel.Text = ">"
+minimizeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeLabel.TextSize = 24
+minimizeLabel.Font = Enum.Font.GothamBold
+minimizeLabel.BackgroundTransparency = 1
+
+-- 最小化按鈕事件
+minimizeButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    minimizedBox.Visible = true
+end)
+
+-- 點擊圓角方塊恢復
+minimizedBox.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local startTime = tick()
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                local elapsedTime = tick() - startTime
+                if elapsedTime < 0.2 then
+                    MainFrame.Visible = true
+                    minimizedBox.Visible = false
+                end
+            end
+        end)
+    end
+end)
+
+-- 拖動功能
+local draggingMinimized = false
+local dragMinimizedStart, startMinimizedPos
+
+minimizedBox.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingMinimized = true
+        dragMinimizedStart = input.Position
+        startMinimizedPos = minimizedBox.Position
+    end
+end)
+
+minimizedBox.InputChanged:Connect(function(input)
+    if draggingMinimized and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragMinimizedStart
+        minimizedBox.Position = UDim2.new(startMinimizedPos.X.Scale, startMinimizedPos.X.Offset + delta.X, startMinimizedPos.Y.Scale, startMinimizedPos.Y.Offset + delta.Y)
+    end
+end)
+
+minimizedBox.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingMinimized = false
+    end
+end)
