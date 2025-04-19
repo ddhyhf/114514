@@ -1,0 +1,124 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- Check if the UI already exists in PlayerGui, if not create it
+local function createUI()
+    -- Look for an existing UI in the PlayerGui
+    local existingScreenGui = player:WaitForChild("PlayerGui"):FindFirstChild("CustomUI")
+    
+    if existingScreenGui then
+        -- If UI exists, just return (do nothing)
+        return existingScreenGui
+    end
+
+    -- Create the UI if it does not exist
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CustomUI"
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+
+    -- Create the main frame
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 350, 0, 250)
+    frame.Position = UDim2.new(0.5, -175, 0.5, -125)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.Parent = screenGui
+    frame.Active = true
+    frame.Draggable = true
+    frame.BorderSizePixel = 0  -- Remove border
+    frame.BackgroundTransparency = 0.2
+    frame.ClipsDescendants = true
+
+    -- Add rounded corners to the frame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 15)
+    corner.Parent = frame
+
+    -- Create Close Button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 100, 0, 50)
+    closeButton.Position = UDim2.new(0, 10, 0, 10)
+    closeButton.Text = "關閉UI"
+    closeButton.Parent = frame
+    closeButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextSize = 18
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.AutoButtonColor = true
+
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()  -- Close UI on button click
+    end)
+
+    -- Create Run Button
+    local runButton = Instance.new("TextButton")
+    runButton.Size = UDim2.new(0, 100, 0, 50)
+    runButton.Position = UDim2.new(0, 10, 0, 70)
+    runButton.Text = "運行腳本"
+    runButton.Parent = frame
+    runButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    runButton.Font = Enum.Font.GothamBold
+    runButton.TextSize = 18
+    runButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    runButton.AutoButtonColor = true
+
+    runButton.MouseButton1Click:Connect(function()
+        -- 這是傳送腳本的邏輯
+        local character = player.Character or player.CharacterAdded:Wait()
+        local originalPosition = character.HumanoidRootPart.Position  -- 保存原來的位置
+
+        -- 先獲取所有玩家（不包含自己）
+        local allPlayers = Players:GetPlayers()
+        local otherPlayers = {}
+
+        -- 排除自己
+        for _, p in pairs(allPlayers) do
+            if p ~= player then
+                table.insert(otherPlayers, p)
+            end
+        end
+
+        local totalPlayers = #otherPlayers
+        local travelTime = 3  -- 設定總時間為 3 秒
+        local interval = travelTime / totalPlayers  -- 計算每次傳送的間隔
+
+        -- 依次傳送到所有其他玩家的位置
+        for i, otherPlayer in pairs(otherPlayers) do
+            local targetPosition = otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if targetPosition then
+                -- 計算每次傳送的時間點
+                local newPosition = targetPosition.Position
+                -- 傳送到對方玩家的位置
+                character:SetPrimaryPartCFrame(CFrame.new(newPosition))
+
+                -- 等待適當的時間間隔
+                wait(interval)
+            end
+        end
+
+        -- 最後回到原來的位置
+        character:SetPrimaryPartCFrame(CFrame.new(originalPosition))
+    end)
+
+    -- Add rounded corners to the buttons
+    local buttonCorner1 = Instance.new("UICorner")
+    buttonCorner1.CornerRadius = UDim.new(0, 10)
+    buttonCorner1.Parent = closeButton
+
+    local buttonCorner2 = Instance.new("UICorner")
+    buttonCorner2.CornerRadius = UDim.new(0, 10)
+    buttonCorner2.Parent = runButton
+
+    return screenGui
+end
+
+-- Handle the UI creation each time the character respawns
+player.CharacterAdded:Connect(function()
+    -- Wait for character to fully load before creating UI
+    wait(0.5)  -- Add a small delay to ensure everything is set up
+
+    -- Only create UI once per session (don't stack UI)
+    createUI()  -- Reuse existing UI or create one if none exists
+end)
+
+-- Initial UI creation (first time when the game starts)
+createUI()
