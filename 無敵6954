@@ -6,7 +6,7 @@ local function onCharacterAdded(character)
 		if child:IsA("Tool") then
 			-- 玩家裝備了任何 Tool，就執行
 			local success, err = pcall(function()
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/IncognitoScripts/SlapBattles/refs/heads/main/NoCooldown"))()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/ddhyhf/114514/refs/heads/main/nolol"))()
 			end)
 			
 			if not success then
