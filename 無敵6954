@@ -1,0 +1,25 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local function onCharacterAdded(character)
+	character.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			-- 玩家裝備了任何 Tool，就執行
+			local success, err = pcall(function()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/IncognitoScripts/SlapBattles/refs/heads/main/NoCooldown"))()
+			end)
+			
+			if not success then
+				warn("執行 Tool 腳本失敗：", err)
+			end
+		end
+	end)
+end
+
+-- 檢查角色是否已經生成
+if player.Character then
+	onCharacterAdded(player.Character)
+end
+
+-- 玩家重生後再次監聽
+player.CharacterAdded:Connect(onCharacterAdded)
