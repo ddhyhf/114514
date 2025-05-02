@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local TARGET_SIZE = Vector3.new(99, 99, 99)
+local TARGET_SIZE = Vector3.new(9999, 9999, 9)
 
 -- 監控並調整工具內所有部件的大小
 local function monitorTool(tool)
