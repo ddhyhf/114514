@@ -1,0 +1,61 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local TARGET_SIZE = Vector3.new(99, 99, 99)
+
+-- 監控並調整工具內所有部件的大小
+local function monitorTool(tool)
+	if not tool:IsA("Tool") then return end
+	
+	-- 遍歷工具中的所有部件，調整大小並隱形
+	for _, part in ipairs(tool:GetChildren()) do
+		if part:IsA("BasePart") then
+			part.Size = TARGET_SIZE -- 設定部件大小
+			part.Transparency = 1 -- 隱形
+		end
+	end
+
+	-- 每幀強制還原大小並保持隱形
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		if tool and tool.Parent then
+			for _, part in ipairs(tool:GetChildren()) do
+				if part:IsA("BasePart") then
+					if part.Size ~= TARGET_SIZE then
+						part.Size = TARGET_SIZE
+					end
+					-- 確保部件隱形
+					part.Transparency = 1
+				end
+			end
+		else
+			if connection then
+				connection:Disconnect()
+			end
+		end
+	end)
+end
+
+-- 監控角色中的所有工具
+local function onCharacterAdded(character)
+	-- 角色身上已有的 Tool
+	for _, child in ipairs(character:GetChildren()) do
+		if child:IsA("Tool") then
+			monitorTool(child)
+		end
+	end
+
+	-- 裝備新 Tool 時
+	character.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			monitorTool(child)
+		end
+	end)
+end
+
+-- 初始角色
+if player.Character then
+	onCharacterAdded(player.Character)
+end
+player.CharacterAdded:Connect(onCharacterAdded)
