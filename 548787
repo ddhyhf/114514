@@ -5,8 +5,8 @@ local character = player.Character or player.CharacterAdded:Wait()
 -- 確保角色已經生成
 local humanoid = character:WaitForChild("Humanoid")
 
--- 設置角色的移動速度為 100
-humanoid.WalkSpeed = 100
+-- 設置角色的移動速度為 50
+humanoid.WalkSpeed = 50
 
 -- 當角色重新生成時，再次設置速度
 player.CharacterAdded:Connect(function(char)
