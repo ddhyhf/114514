@@ -7,9 +7,3 @@ local humanoid = character:WaitForChild("Humanoid")
 
 -- 設置角色的移動速度為 50
 humanoid.WalkSpeed = 50
-
--- 當角色重新生成時，再次設置速度
-player.CharacterAdded:Connect(function(char)
-    humanoid = char:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = 100
-end)
