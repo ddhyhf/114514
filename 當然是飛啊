@@ -1,0 +1,107 @@
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character
+local humanoidRootPart
+local humanoid
+local flying = false
+local flySpeed = 100  -- 增加飛行速度
+local bodyVelocity, bodyGyro
+
+-- 初始化飛行功能
+local function initializeFlying()
+    character = player.Character or player.CharacterAdded:Wait()
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+end
+
+-- 啟動飛行
+local function startFlying()
+    if flying then return end
+    flying = true
+
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Parent = humanoidRootPart
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.CFrame = humanoidRootPart.CFrame
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.Parent = humanoidRootPart
+end
+
+-- 停止飛行
+local function stopFlying()
+    if not flying then return end
+    flying = false
+
+    if bodyVelocity then bodyVelocity:Destroy() end
+    if bodyGyro then bodyGyro:Destroy() end
+end
+
+-- 飛行時根據攝像機視角控制角色的移動
+RunService.RenderStepped:Connect(function()
+    if flying then
+        -- **如果玩家正在輸入文字，則不處理移動**
+        if UserInputService:GetFocusedTextBox() then
+            return
+        end
+
+        local camera = Workspace.CurrentCamera
+        local camLook = camera.CFrame.LookVector
+        local camRight = camera.CFrame.RightVector
+
+        local moveDir = Vector3.new(0, 0, 0)
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDir = moveDir + camLook
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDir = moveDir - camLook
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDir = moveDir - camRight
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDir = moveDir + camRight
+        end
+
+        -- 添加升降功能
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveDir = moveDir + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            moveDir = moveDir - Vector3.new(0, 1, 0)
+        end
+
+        bodyVelocity.Velocity = moveDir * flySpeed
+        bodyGyro.CFrame = CFrame.new(humanoidRootPart.Position, humanoidRootPart.Position + camLook)
+    end
+end)
+
+-- 使用N鍵來切換飛行
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- **如果正在打字，不觸發飛行切換**
+    if gameProcessed or UserInputService:GetFocusedTextBox() then return end
+
+    if input.KeyCode == Enum.KeyCode.N then
+        if flying then
+            stopFlying()
+        else
+            startFlying()
+        end
+    end
+end)
+
+-- 監聽角色死亡與重新生成
+player.CharacterAdded:Connect(function()
+    stopFlying()
+    initializeFlying()
+end)
+
+-- 初始化飛行功能
+initializeFlying()
