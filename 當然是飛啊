@@ -8,7 +8,7 @@ local character
 local humanoidRootPart
 local humanoid
 local flying = false
-local flySpeed = 100  -- 增加飛行速度
+local flySpeed = 5000  -- 增加飛行速度
 local bodyVelocity, bodyGyro
 
 -- 初始化飛行功能
@@ -83,12 +83,12 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 使用N鍵來切換飛行
+-- 使用V鍵來切換飛行
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     -- **如果正在打字，不觸發飛行切換**
     if gameProcessed or UserInputService:GetFocusedTextBox() then return end
 
-    if input.KeyCode == Enum.KeyCode.N then
+    if input.KeyCode == Enum.KeyCode.V then
         if flying then
             stopFlying()
         else
