@@ -1,0 +1,2 @@
+loadstring(game:HttpGet("https://github.com/Nickyangtpe/Roblox-scripts/raw/refs/heads/main/FE%20Fling%20Script", true))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/ddhyhf/114514/refs/heads/main/槌子'))()
