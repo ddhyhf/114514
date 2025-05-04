@@ -1,0 +1,2 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sinret/rbxscript.com-scripts-reuploads-/main/ak47", true))() 
+loadstring(game:HttpGet('https://raw.githubusercontent.com/ddhyhf/114514/refs/heads/main/10001145'))()
