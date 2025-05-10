@@ -1,0 +1,26 @@
+local UIS = game:GetService("UserInputService")
+local player = game.Players.LocalPlayer
+local mouseVisible = false
+
+-- 保持第一人稱模式
+player.CameraMode = Enum.CameraMode.LockFirstPerson
+
+-- 每幀都設置滑鼠狀態
+game:GetService("RunService").RenderStepped:Connect(function()
+    -- 如果按下 M 鍵切換滑鼠顯示
+    if mouseVisible then
+        UIS.MouseIconEnabled = true
+        UIS.MouseBehavior = Enum.MouseBehavior.Default
+    else
+        UIS.MouseIconEnabled = false
+        UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+    end
+end)
+
+-- 切換 M 鍵來顯示或隱藏滑鼠
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.M then
+        mouseVisible = not mouseVisible
+    end
+end)
