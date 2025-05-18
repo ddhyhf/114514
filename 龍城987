@@ -1,9 +1,47 @@
-local part = Instance.new("Part")
-part.Size = Vector3.new(2000, 2, 2000)
-part.Position = Vector3.new(92.736, 989.879, 1021.133)
-part.Anchored = true
-part.Anchored = true
-part.Material = Enum.Material.SmoothPlastic
-part.Color = Color3.fromRGB(150, 150, 150)
-part.Name = "BigPlatform"
-part.Parent = workspace
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 建立 ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "HelloGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- 建立 TextLabel
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(0.3, 0, 0.1, 0)
+textLabel.Position = UDim2.new(0.35, 0, 0.45, 0)
+textLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+textLabel.BackgroundTransparency = 0.3
+textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+textLabel.TextScaled = true
+textLabel.Font = Enum.Font.SourceSansBold
+textLabel.Text = "龍城堡"
+textLabel.TextTransparency = 1 -- 開始時完全透明
+textLabel.Parent = screenGui
+
+-- 建立 Tween 動畫（淡入）
+local fadeIn = TweenService:Create(textLabel, TweenInfo.new(0.5), {
+    TextTransparency = 0
+})
+
+-- 建立 Tween 動畫（淡出）
+local fadeOut = TweenService:Create(textLabel, TweenInfo.new(0.5), {
+    TextTransparency = 1
+})
+
+-- 執行動畫
+fadeIn:Play()
+fadeIn.Completed:Wait()
+
+-- 停留 1 秒
+task.wait(1)
+
+fadeOut:Play()
+fadeOut.Completed:Wait()
+
+-- 移除 GUI
+screenGui:Destroy()
