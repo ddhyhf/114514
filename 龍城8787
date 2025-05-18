@@ -1,0 +1,12 @@
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+-- 等待角色加載完成
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- 傳送到指定座標
+hrp.CFrame = CFrame.new(37.77626037597656,922.955810546875,511.07864379882811)
+
+print("你現在已經到了龍城")
