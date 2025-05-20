@@ -1,212 +1,159 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local Camera            = workspace.CurrentCamera
+local LocalPlayer       = Players.LocalPlayer
 
---// man!
-function loadMainScript()
-getgenv().AimPart = "Head"
-getgenv().FOV = 150
-getgenv().Smoothness = 2
-getgenv().AimKey = Enum.KeyCode.E
-getgenv().AimInputType = "KeyCode"
-getgenv().MaxDistance = 100
-getgenv().AimbotEnabled = false
-getgenv().ESPEnabled = false
+-- 按鍵狀態與目標存放
+local Holding           = false
+local CurrentTarget     = nil
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-local Holding = false
+-- 全域設定
+getgenv().AimPart             = "Head"
+getgenv().FOV                 = 150
+getgenv().Smoothness          = 2
+getgenv().AimKey              = Enum.KeyCode.E
+getgenv().AimInputType        = "KeyCode"
+getgenv().MaxDistance         = 100
+getgenv().AimbotEnabled       = false
+getgenv().ESPEnabled          = false
+getgenv().BackLockEnabled     = false
+getgenv().BackLockMaxDistance = 1000
 
--- man!
+-- UI Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Axiiiom/UILIB/refs/heads/main/LIBHE"))()
-local Window = Library:CreateWindow("Rivals Hub", Vector2.new(492, 598), Enum.KeyCode.RightControl)
-local AimingTab = Window:CreateTab("Aiming")
+local Window  = Library:CreateWindow("Rivals Hub", Vector2.new(492,598), Enum.KeyCode.RightControl)
+local Tab     = Window:CreateTab("Aiming")
+local Sec     = Tab:CreateSector("Aimbot & ESP Settings","left")
 
-local AimSection = AimingTab:CreateSector("Aimbot & ESP Settings", "left")
-
--- FOV Circle
+-- FOV 圈
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Radius = getgenv().FOV
-FOVCircle.Thickness = 2
-FOVCircle.Filled = false
-FOVCircle.Transparency = 1
-FOVCircle.Color = Color3.fromRGB(0, 255, 0)
-FOVCircle.Visible = true
+FOVCircle.Radius      = getgenv().FOV
+FOVCircle.Thickness   = 2
+FOVCircle.Filled      = false
+FOVCircle.Transparency= 1
+FOVCircle.Color       = Color3.fromRGB(0,255,0)
+FOVCircle.Visible     = false
 
--- man!
+-- ESP 系統
 local ESPs = {}
-function CreateESP(player)
+local function CreateESP(p)
     local box = Drawing.new("Square")
-    box.Thickness = 1
-    box.Transparency = 1
-    box.Color = Color3.fromRGB(255, 0, 0)
-    box.Visible = false
-
+    box.Thickness   = 1
+    box.Transparency= 1
+    box.Color       = Color3.fromRGB(255,0,0)
+    box.Visible     = false
     local dot = Drawing.new("Circle")
-    dot.Radius = 5
-    dot.Filled = true
-    dot.Color = Color3.fromRGB(255, 0, 0)
+    dot.Radius  = 5
+    dot.Filled  = true
+    dot.Color   = Color3.fromRGB(255,0,0)
     dot.Visible = false
-
-    ESPs[player] = {Box = box, Dot = dot}
+    ESPs[p] = {Box=box, Dot=dot}
 end
-
-function RemoveESP(player)
-    if ESPs[player] then
-        ESPs[player].Box:Remove()
-        ESPs[player].Dot:Remove()
-        ESPs[player] = nil
+local function RemoveESP(p)
+    if ESPs[p] then
+        ESPs[p].Box:Remove()
+        ESPs[p].Dot:Remove()
+        ESPs[p] = nil
     end
 end
+for _,p in ipairs(Players:GetPlayers()) do if p~=LocalPlayer then CreateESP(p) end end
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(RemoveESP)
 
-function GetClosestPlayer()
-    local closest = nil
-    local shortestDistance = getgenv().FOV
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(getgenv().AimPart) then
-            local part = player.Character[getgenv().AimPart]
-            local pos, visible = Camera:WorldToViewportPoint(part.Position)
-            if visible then
-                local distance = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closest = player
+-- 找最近的玩家（在 FOV 圈內）
+local function GetClosestPlayer()
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local bestDist, bestPl = getgenv().FOV, nil
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(getgenv().AimPart) then
+            local part = p.Character[getgenv().AimPart]
+            local pos, vis = Camera:WorldToViewportPoint(part.Position)
+            if vis then
+                local d = (Vector2.new(pos.X,pos.Y) - center).Magnitude
+                if d < bestDist then
+                    bestDist, bestPl = d, p
                 end
             end
         end
     end
-
-    return closest
+    return bestPl
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then 
-        CreateESP(player)
-    end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then 
-        CreateESP(p)
-    end
+-- UI 控制元件
+Sec:AddToggle("Aimbot Enabled", false, function(s) getgenv().AimbotEnabled       = s end)
+Sec:AddToggle("ESP Enabled",    false, function(s) getgenv().ESPEnabled          = s end)
+Sec:AddSlider("FOV",            50,150,500,1, function(v) 
+    getgenv().FOV            = v 
+    FOVCircle.Radius        = v 
 end)
-Players.PlayerRemoving:Connect(RemoveESP)
-
-AimSection:AddToggle("Aimbot Enabled", false, function(state)
-    getgenv().AimbotEnabled = state
-end)
-
-AimSection:AddToggle("ESP Enabled", false, function(state)
-    getgenv().ESPEnabled = state
-end)
-
-AimSection:AddSlider("FOV", 50, 150, 500, 1, function(value)
-    getgenv().FOV = value
-    FOVCircle.Radius = value
-end)
-
-AimSection:AddSlider("Smoothness", 1, 2, 10, 1, function(value)
-    getgenv().Smoothness = value
-end)
-
-AimSection:AddSlider("Max Distance", 50, 100, 500, 1, function(value)
-    getgenv().MaxDistance = value
-end)
-
-AimSection:AddDropdown("Aim Part", {"Head", "Torso", "HumanoidRootPart"}, "Head", false, function(value)
-    getgenv().AimPart = value
-end)
-
-AimSection:AddDropdown("Aim Key", {"MouseButton2/Right Click", "E", "Q", "LeftShift"}, "E", false, function(value)
-    if value == "MouseButton2/Right Click" then
-        getgenv().AimKey = Enum.UserInputType.MouseButton2
-        getgenv().AimInputType = "UserInputType"
-    elseif value == "E" then
-        getgenv().AimKey = Enum.KeyCode.E
-        getgenv().AimInputType = "KeyCode"
-    elseif value == "Q" then
-        getgenv().AimKey = Enum.KeyCode.Q
-        getgenv().AimInputType = "KeyCode"
-    elseif value == "LeftShift" then
-        getgenv().AimKey = Enum.KeyCode.LeftShift
-        getgenv().AimInputType = "KeyCode"
-    end
-end)
-
-local FOVColorToggle = AimSection:AddToggle("FOV Color", false, function() end)
-FOVColorToggle:AddColorpicker(Color3.fromRGB(0, 255, 0), function(color)
-    FOVCircle.Color = color
-end)
-
-local ESPColorToggle = AimSection:AddToggle("ESP Color", false, function() end)
-ESPColorToggle:AddColorpicker(Color3.fromRGB(255, 0, 0), function(color)
-    for _, esp in pairs(ESPs) do
-        esp.Box.Color = color
-        esp.Dot.Color = color
-    end
-end)
-
-AimingTab:CreateConfigSystem("right")
-
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if not gameProcessedEvent then
-        if getgenv().AimInputType == "KeyCode" and input.KeyCode == getgenv().AimKey then
-            Holding = true
-        elseif getgenv().AimInputType == "UserInputType" and input.UserInputType == getgenv().AimKey then
-            Holding = true
+Sec:AddSlider("Smoothness",     1,2,10,1,   function(v) getgenv().Smoothness     = v end)
+Sec:AddSlider("Max Distance",   50,100,500,1, function(v) getgenv().MaxDistance  = v end)
+Sec:AddDropdown("Aim Part",{"Head","Torso","HumanoidRootPart"},"Head",false,
+    function(v) getgenv().AimPart = v end)
+Sec:AddDropdown("Aim Key",{"MouseButton2/Right Click","E","Q","LeftShift"},"E",false,
+    function(v)
+        if v=="MouseButton2/Right Click" then
+            getgenv().AimKey       = Enum.UserInputType.MouseButton2
+            getgenv().AimInputType = "UserInputType"
+        else
+            getgenv().AimKey       = Enum.KeyCode[v]
+            getgenv().AimInputType = "KeyCode"
         end
+    end)
+Sec:AddToggle("Back Lock",      false, function(s) getgenv().BackLockEnabled     = s end)
+Sec:AddSlider("Back Lock Max Range",5,20,1000,1,
+    function(v) getgenv().BackLockMaxDistance = v end)
+local fc = Sec:AddToggle("FOV Color", false)
+fc:AddColorpicker(Color3.fromRGB(0,255,0), function(c) FOVCircle.Color = c end)
+local ec = Sec:AddToggle("ESP Color", false)
+ec:AddColorpicker(Color3.fromRGB(255,0,0), function(c)
+    for _,e in pairs(ESPs) do e.Box.Color = c; e.Dot.Color = c end
+end)
+Tab:CreateConfigSystem("right")
+
+-- 偵測按鍵
+UserInputService.InputBegan:Connect(function(i,gp)
+    if not gp and
+       ((getgenv().AimInputType=="KeyCode" and i.KeyCode==getgenv().AimKey) or
+        (getgenv().AimInputType=="UserInputType" and i.UserInputType==getgenv().AimKey)) then
+        Holding = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(i,gp)
+    if not gp and
+       ((getgenv().AimInputType=="KeyCode" and i.KeyCode==getgenv().AimKey) or
+        (getgenv().AimInputType=="UserInputType" and i.UserInputType==getgenv().AimKey)) then
+        Holding       = false
+        CurrentTarget = nil
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
-    if not gameProcessedEvent then
-        if getgenv().AimInputType == "KeyCode" and input.KeyCode == getgenv().AimKey then
-            Holding = false
-        elseif getgenv().AimInputType == "UserInputType" and input.UserInputType == getgenv().AimKey then
-            Holding = false
-        end
-    end
-end)
-
+-- 每幀更新
 RunService.RenderStepped:Connect(function()
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+
+    -- FOV 圈顯示
     FOVCircle.Position = center
-    FOVCircle.Visible = getgenv().AimbotEnabled
+    FOVCircle.Visible  = getgenv().AimbotEnabled
 
-    if Holding and getgenv().AimbotEnabled then
-        local target = GetClosestPlayer()
-        if target and target.Character then
-            local part = target.Character:FindFirstChild(getgenv().AimPart)
-            if part then
-                local pos = Camera:WorldToViewportPoint(part.Position)
-                local delta = (Vector2.new(pos.X, pos.Y) - center) / getgenv().Smoothness
-                pcall(function()
-                    mousemoverel(delta.X, delta.Y)
-                end)
-            end
-        end
-    end
-
-    for player, esp in pairs(ESPs) do
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Head") then
-            local hrp = char.HumanoidRootPart
-            local head = char.Head
-            local headPos, headVisible = Camera:WorldToViewportPoint(head.Position)
-            local hrpPos, hrpVisible = Camera:WorldToViewportPoint(hrp.Position)
-            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (char.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
-
-            if headVisible and hrpVisible and distance <= getgenv().MaxDistance and getgenv().ESPEnabled then
-                local height = math.clamp((headPos - hrpPos).Y * 2, 2, 400)
-                local width = height / 1.5
-                esp.Box.Size = Vector2.new(width, height)
-                esp.Box.Position = Vector2.new(hrpPos.X - width / 2, hrpPos.Y - height / 2)
-                esp.Box.Visible = true
-                esp.Dot.Position = Vector2.new(headPos.X, headPos.Y)
-                esp.Dot.Visible = true
+    -- ESP 更新
+    for p,esp in pairs(ESPs) do
+        local c = p.Character
+        if c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChild("Head") then
+            local hrp, head = c.HumanoidRootPart, c.Head
+            local hp, hv = Camera:WorldToViewportPoint(head.Position)
+            local rp, rv = Camera:WorldToViewportPoint(hrp.Position)
+            local dist = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                         and (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+            if hv and rv and dist <= getgenv().MaxDistance and getgenv().ESPEnabled then
+                local h = math.clamp((Vector2.new(hp.X,hp.Y)-Vector2.new(rp.X,rp.Y)).Y*2,2,400)
+                local w = h/1.5
+                esp.Box.Size     = Vector2.new(w,h)
+                esp.Box.Position = Vector2.new(rp.X-w/2, rp.Y-h/2)
+                esp.Box.Visible  = true
+                esp.Dot.Position = Vector2.new(hp.X,hp.Y)
+                esp.Dot.Visible  = true
             else
                 esp.Box.Visible = false
                 esp.Dot.Visible = false
@@ -216,6 +163,32 @@ RunService.RenderStepped:Connect(function()
             esp.Dot.Visible = false
         end
     end
+
+    if not Holding then return end
+
+    -- 鎖定同一目標
+    if not CurrentTarget or not CurrentTarget.Character or not CurrentTarget.Character:FindFirstChild(getgenv().AimPart) then
+        CurrentTarget = GetClosestPlayer()
+    end
+    if not CurrentTarget then return end
+
+    -- Aimbot
+    if getgenv().AimbotEnabled then
+        local part = CurrentTarget.Character:FindFirstChild(getgenv().AimPart)
+        if part then
+            local p2v   = Camera:WorldToViewportPoint(part.Position)
+            local delta = (Vector2.new(p2v.X,p2v.Y)-center)/getgenv().Smoothness
+            pcall(function() mousemoverel(delta.X, delta.Y) end)
+        end
+    end
+
+    -- Back Lock
+    if getgenv().BackLockEnabled then
+        local myHRP     = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart")
+        if myHRP and targetHRP then
+            local behind = targetHRP.CFrame * CFrame.new(0,0,2)
+            myHRP.CFrame    = CFrame.new(behind.Position, targetHRP.Position)
+        end
+    end
 end)
-end
-loadMainScript()
