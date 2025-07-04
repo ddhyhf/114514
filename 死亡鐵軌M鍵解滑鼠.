@@ -1,0 +1,4 @@
+getgenv().auto_bond=true
+getgenv().auto_win=true
+loadstring(game:HttpGet('https://raw.githubusercontent.com/m00ndiety/Dead-rails/refs/heads/main/Auto-Win-With-Bonds'))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/ddhyhf/114514/refs/heads/main/滑鼠'))()
