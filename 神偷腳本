@@ -32,7 +32,7 @@ local function v2(v65)
     end)
 end
 
-v2("Happy using the script🔥🤤")
+v2("神偷script🔥")
 
 local v3 = false
 
@@ -156,12 +156,12 @@ v32.Position = UDim2.new(0, 40, 0, 5)
 v32.Size = UDim2.new(0.7, 0, 0, 30)
 v32.BackgroundTransparency = 1
 v32.Font = Enum.Font.SourceSansBold
-v32.Text = "Steal a Bainrot by ALIPXF"
+v32.Text = "偷一個腦腐 - 大自然製作"
 v32.TextColor3 = Color3.fromRGB(255, 255, 0)
 v32.TextScaled = true
 
 local v40 = Instance.new("TextButton", v11)
-v40.Text = "Teleport Up"
+v40.Text = "傳送到上方"
 v40.Position = UDim2.new(0.1, 0, 0.3, 0)
 v40.Size = UDim2.new(0.8, 0, 0, 30)
 v40.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -176,7 +176,7 @@ v40.MouseButton1Click:Connect(function()
 end)
 
 local v49 = Instance.new("TextButton", v11)
-v49.Text = "Fall Down"
+v49.Text = "墜落到地面"
 v49.Position = UDim2.new(0.1, 0, 0.5, 0)
 v49.Size = UDim2.new(0.8, 0, 0, 30)
 v49.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -192,7 +192,7 @@ v49.MouseButton1Click:Connect(function()
 end)
 
 local v57 = Instance.new("TextButton", v11)
-v57.Text = "Toggle ESP"
+v57.Text = "切換透視"
 v57.Position = UDim2.new(0.1, 0, 0.7, 0)
 v57.Size = UDim2.new(0.8, 0, 0, 30)
 v57.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
