@@ -1,0 +1,221 @@
+local v0 = game.Players.LocalPlayer
+local v1 = v0:WaitForChild("PlayerGui")
+
+-- 顯示通知函數
+local function v2(v65)
+    local v66 = Instance.new("ScreenGui", v1)
+    v66.Name = "NotifGUI_" .. math.random(1000, 9999)
+    v66.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local v70 = Instance.new("Frame", v66)
+    v70.Size = UDim2.new(0, 300, 0, 50)
+    v70.Position = UDim2.new(1, -310, 1, -60)
+    v70.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    v70.BorderSizePixel = 0
+    v70.BackgroundTransparency = 0.2
+
+    local v76 = Instance.new("TextLabel", v70)
+    v76.Size = UDim2.new(1, 0, 1, 0)
+    v76.BackgroundTransparency = 1
+    v76.Font = Enum.Font.SourceSansBold
+    v76.Text = v65
+    v76.TextColor3 = Color3.fromRGB(255, 255, 255)
+    v76.TextScaled = true
+
+    local v84 = Instance.new("Sound", v66)
+    v84.SoundId = "rbxassetid://9118823107"
+    v84.Volume = 1
+    v84:Play()
+
+    task.delay(4, function()
+        v66:Destroy()
+    end)
+end
+
+v2("Happy using the script🔥🤤")
+
+local v3 = false
+
+-- 加入 ESP
+local function v4(v87)
+    if v87.Character and not v87.Character:FindFirstChild("ESP_Highlight") then
+        local v92 = Instance.new("Highlight")
+        v92.Name = "ESP_Highlight"
+        v92.FillColor = Color3.fromRGB(255, 255, 0)
+        v92.OutlineColor = Color3.fromRGB(255, 0, 0)
+        v92.FillTransparency = 0.5
+        v92.OutlineTransparency = 0
+        v92.Adornee = v87.Character
+        v92.Parent = v87.Character
+
+        local v101 = Instance.new("BillboardGui")
+        v101.Name = "ESP_Name"
+        v101.Adornee = v87.Character:WaitForChild("Head")
+        v101.Size = UDim2.new(0, 150, 0, 50)
+        v101.StudsOffset = Vector3.new(0, 3, 0)
+        v101.AlwaysOnTop = true
+        v101.Parent = v87.Character
+
+        local v108 = Instance.new("ImageLabel", v101)
+        v108.Size = UDim2.new(0, 32, 0, 32)
+        v108.Position = UDim2.new(0, 0, 0, 0)
+        v108.BackgroundTransparency = 1
+        v108.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. v87.UserId .. "&width=420&height=420&format=png"
+
+        local v113 = Instance.new("TextLabel", v101)
+        v113.Position = UDim2.new(0, 36, 0, 4)
+        v113.Size = UDim2.new(1, -36, 1, -4)
+        v113.BackgroundTransparency = 1
+        v113.Text = v87.Name
+        v113.TextColor3 = Color3.new(1, 1, 1)
+        v113.Font = Enum.Font.SourceSansBold
+        v113.TextScaled = true
+    end
+end
+
+-- 移除 ESP
+local function v5()
+    for _, v91 in pairs(game.Players:GetPlayers()) do
+        if v91 ~= v0 and v91.Character then
+            if v91.Character:FindFirstChild("ESP_Highlight") then
+                v91.Character.ESP_Highlight:Destroy()
+            end
+            if v91.Character:FindFirstChild("ESP_Name") then
+                v91.Character.ESP_Name:Destroy()
+            end
+        end
+    end
+end
+
+-- 切換 ESP 開關
+local function v6()
+    if not v3 then
+        for _, v131 in pairs(game.Players:GetPlayers()) do
+            if v131 ~= v0 then
+                v4(v131)
+            end
+        end
+        game.Players.PlayerAdded:Connect(function(v132)
+            v132.CharacterAdded:Connect(function()
+                task.wait(1)
+                if v3 then
+                    v4(v132)
+                end
+            end)
+        end)
+        v2("ESP Enabled ✅")
+    else
+        v5()
+        v2("ESP Disabled ❌")
+    end
+    v3 = not v3
+end
+
+-- 主 GUI
+local v7 = Instance.new("ScreenGui", v1)
+v7.Name = "StealABainrotGUI"
+v7.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local v11 = Instance.new("Frame", v7)
+v11.Name = "MainFrame"
+v11.Size = UDim2.new(0, 270, 0, 250)
+v11.Position = UDim2.new(0.1, 0, 0.1, 0)
+v11.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+v11.Active = true
+v11.Draggable = true
+
+local v18 = Instance.new("ImageLabel", v11)
+v18.Size = UDim2.new(0, 30, 0, 30)
+v18.Position = UDim2.new(0, 5, 0, 5)
+v18.BackgroundTransparency = 1
+v18.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. v0.UserId .. "&width=420&height=420&format=png"
+
+local v23 = Instance.new("TextButton", v11)
+v23.Text = "X"
+v23.Size = UDim2.new(0, 30, 0, 30)
+v23.Position = UDim2.new(1, -35, 0, 5)
+v23.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+v23.TextColor3 = Color3.new(1, 1, 1)
+v23.Font = Enum.Font.SourceSansBold
+v23.TextScaled = true
+v23.MouseButton1Click:Connect(function()
+    spawn(function()
+        for _ = 1, 20 do
+            v11.Rotation = v11.Rotation + 18
+            v11.Size = v11.Size - UDim2.new(0, 10, 0, 6)
+            v11.Position = v11.Position + UDim2.new(0, 5, 0, 3)
+            wait(0.03)
+        end
+        v7:Destroy()
+        v2("The gui menu is gone")
+    end)
+end)
+
+local v32 = Instance.new("TextLabel", v11)
+v32.Position = UDim2.new(0, 40, 0, 5)
+v32.Size = UDim2.new(0.7, 0, 0, 30)
+v32.BackgroundTransparency = 1
+v32.Font = Enum.Font.SourceSansBold
+v32.Text = "Steal a Bainrot by ALIPXF"
+v32.TextColor3 = Color3.fromRGB(255, 255, 0)
+v32.TextScaled = true
+
+local v40 = Instance.new("TextButton", v11)
+v40.Text = "Teleport Up"
+v40.Position = UDim2.new(0.1, 0, 0.3, 0)
+v40.Size = UDim2.new(0.8, 0, 0, 30)
+v40.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+v40.TextColor3 = Color3.new(1, 1, 1)
+v40.Font = Enum.Font.SourceSans
+v40.TextScaled = true
+v40.MouseButton1Click:Connect(function()
+    local v88 = v0.Character
+    if v88 and v88:FindFirstChild("HumanoidRootPart") then
+        v88.HumanoidRootPart.CFrame = v88.HumanoidRootPart.CFrame + Vector3.new(0, 200, 0)
+    end
+end)
+
+local v49 = Instance.new("TextButton", v11)
+v49.Text = "Fall Down"
+v49.Position = UDim2.new(0.1, 0, 0.5, 0)
+v49.Size = UDim2.new(0.8, 0, 0, 30)
+v49.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+v49.TextColor3 = Color3.new(1, 1, 1)
+v49.Font = Enum.Font.SourceSans
+v49.TextScaled = true
+v49.MouseButton1Click:Connect(function()
+    local v89 = v0.Character
+    if v89 and v89:FindFirstChild("HumanoidRootPart") then
+        local v128 = Vector3.new(v89.HumanoidRootPart.Position.X, 10, v89.HumanoidRootPart.Position.Z)
+        v89.HumanoidRootPart.CFrame = CFrame.new(v128)
+    end
+end)
+
+local v57 = Instance.new("TextButton", v11)
+v57.Text = "Toggle ESP"
+v57.Position = UDim2.new(0.1, 0, 0.7, 0)
+v57.Size = UDim2.new(0.8, 0, 0, 30)
+v57.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+v57.TextColor3 = Color3.new(1, 1, 1)
+v57.Font = Enum.Font.SourceSans
+v57.TextScaled = true
+v57.MouseButton1Click:Connect(v6)
+
+-- ✅ 新增：GUI 切換圖標按鈕
+local toggleButtonGui = Instance.new("ScreenGui", v1)
+toggleButtonGui.Name = "ToggleButtonGUI"
+toggleButtonGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local toggleButton = Instance.new("ImageButton", toggleButtonGui)
+toggleButton.Name = "ToggleMainGUI"
+toggleButton.Size = UDim2.new(0, 40, 0, 40)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.BackgroundTransparency = 1
+toggleButton.Image = "rbxassetid://6031094678" -- 三條線
+
+toggleButton.MouseButton1Click:Connect(function()
+    v11.Visible = not v11.Visible
+end)
+
+-- 預設顯示主 GUI
+v11.Visible = true
