@@ -1,0 +1,77 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+--Join Our Discord To Support Us
+-- https://discord.gg/FyJT7tRvzn
+repeat task.wait() until game:IsLoaded()
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/memejames/elerium-v2-ui-library//main/Library",true))()
+local win = lib:AddWindow("ZeroHub By theloststar0802",{main_color = Color3.fromRGB(41,74,122),min_size = Vector2.new(250,346),can_resize = true}) game:GetService("CoreGui"):FindFirstChild("imgui").Name = "ZeroHub"
+local char = game:GetService("Players").LocalPlayer.Character or game:GetService("Players").LocalPlayer.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local hum = char:WaitForChild("Humanoid")
+local tabs = {
+    Features = win:AddTab("Features"),
+    Settings = win:AddTab("Settings"),
+    Misc = win:AddTab("Misc")
+}
+getgenv().Settings = {
+    ["Auto Farm"] = false,
+    ["Auto Multiple"] = false,
+    ["Auto Multiple_"] = false,
+    Delay = nil,
+}
+tabs.Features:AddButton("Sell",function()
+    hrp.CFrame = CFrame.new(30,5.50000381,-53.4010239,0,0,-1,0,1,0,1,0,0)
+    task.wait(getgenv().Settings.Delay)
+    fireproximityprompt(workspace.SellPrompt:FindFirstChild("ProximityPrompt"),hrp,0)
+end)
+tabs.Features:AddButton("Auto Farm Studs",function()
+    getgenv().Settings["Auto Farm"] = not getgenv().Settings["Auto Farm"]
+end)
+tabs.Features:AddButton("Auto Gain Multipliers",function()
+    getgenv().Settings["Auto Multiple"] = not getgenv().Settings["Auto Multiple"]
+end)
+tabs.Features:AddButton("Auto Gain Super Multipliers",function()
+    getgenv().Settings["Auto Multiple_"] = not getgenv().Settings["Auto Multiple_"]
+end)
+tabs.Features:AddTextBox("Set Rebiths [Adds An Extra One]",function(v)
+    if tonumber(v) then workspace:WaitForChild("Events"):WaitForChild("UpgradeRebirth"):WaitForChild("RemoteEvent"):FireServer(v,0/.01) end
+end)
+tabs.Features:AddTextBox("Rebiths Adder [Adds An Extra One]",function(v)
+    if tonumber(v) then workspace:WaitForChild("Events"):WaitForChild("UpgradeRebirth"):WaitForChild("RemoteEvent"):FireServer(game:GetService("Players").LocalPlayer.leaderstats.Rebirths.Value+v,0/.01) end
+end)
+tabs.Features:AddButton("Rebiths Math.Huge",function()
+    workspace:WaitForChild("Events"):WaitForChild("UpgradeRebirth"):WaitForChild("RemoteEvent"):FireServer(math.huge,0/.01)
+end)
+tabs.Settings:AddTextBox("Sell Delay",function(v)
+    if tonumber(v) and tonumber(v) >= 0.101 then getgenv().Settings.Delay = tonumber(v) end
+end)
+tabs.Settings:AddTextBox("WalkSpeed",function(v)
+    if tonumber(v) then workspace:WaitForChild("Events"):WaitForChild("UpgradeSpeed"):WaitForChild("RemoteEvent"):FireServer(tonumber(v),0/.01) end
+end)
+local studs = {}
+workspace.ChildAdded:Connect(function(child)
+    if string.match(child.Name,"^Stud%d*$") then
+        table.insert(studs,child)
+    end
+end)
+for _,v in ipairs(workspace:GetChildren()) do
+    if string.match(v.Name,"^Stud%d*$") then
+        table.insert(studs,v)
+    end
+end
+game:GetService("RunService").RenderStepped:Connect(function()
+    if getgenv().Settings["Auto Farm"] then
+        for _,stud in ipairs(studs) do
+            if stud:IsDescendantOf(workspace) then
+                firetouchinterest(stud,hrp,0)
+            end
+        end
+    end
+    if getgenv().Settings["Auto Multiple"] then
+        workspace:WaitForChild("Events"):WaitForChild("UpgradeMultiplier"):WaitForChild("RemoteEvent"):FireServer(0/.01)
+    end
+    if getgenv().Settings["Auto Multiple_"] then
+        workspace:WaitForChild("Events"):WaitForChild("UpgradeProMultiplier"):WaitForChild("RemoteEvent"):FireServer(0/.01)
+    end
+end)
