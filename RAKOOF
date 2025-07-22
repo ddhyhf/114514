@@ -1,0 +1,78 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+local handled = {}
+
+-- 傳送玩家到指定位置上方
+local function teleportTo(position)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.CFrame = CFrame.new(position + Vector3.new(0, 6, 0))
+	end
+end
+
+-- 自動裝備名為 StunStick 的 Tool
+local function equipStunStick()
+	local character = player.Character or player.CharacterAdded:Wait()
+	local backpack = player:WaitForChild("Backpack")
+
+	local tool = character:FindFirstChild("StunStick") or backpack:FindFirstChild("StunStick")
+	if tool then
+		tool.Parent = character
+		return tool
+	end
+	return nil
+end
+
+-- 靠近 hand 模擬攻擊（近戰觸碰）
+local function attackHand(part)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local tool = equipStunStick()
+
+	if hrp and part and tool then
+		for _ = 1, 5 do
+			task.wait(0.1)
+			hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 2, 0))
+		end
+	end
+end
+
+-- 主處理函數：針對 The_Rake 模型
+local function handleRake(model)
+	if handled[model] then return end
+	handled[model] = true
+
+	local torso = model:FindFirstChild("Torso")
+	if torso then torso:Destroy() end
+
+	local bone = model:FindFirstChild("Bone")
+	if bone then bone:Destroy() end
+
+	local head = model:FindFirstChild("Head")
+	if head then
+		head.Size = Vector3.new(111, 11, 11)
+		teleportTo(head.Position)
+	end
+
+	local hand = model:FindFirstChild("Hand") or model:FindFirstChild("hand")
+	if hand then
+		attackHand(hand)
+	end
+end
+
+-- 初始檢查
+for _, obj in ipairs(Workspace:GetDescendants()) do
+	if obj:IsA("Model") and obj.Name == "The_Rake" then
+		handleRake(obj)
+	end
+end
+
+-- 監控動態生成的 The_Rake
+Workspace.DescendantAdded:Connect(function(obj)
+	if obj:IsA("Model") and obj.Name == "The_Rake" then
+		task.wait(0.3)
+		handleRake(obj)
+	end
+end)
