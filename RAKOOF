@@ -1,102 +1,87 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
-local toolName = "StunStick"
-local attackCooldown = 0.3
-
--- 找工具
-local function getTool()
-    return character:FindFirstChild(toolName) or player.Backpack:FindFirstChild(toolName)
+-- 初始化
+local tool = player.Backpack:FindFirstChild("StunStick") or character:FindFirstChild("StunStick")
+if not tool then
+	warn("找不到 StunStick 工具")
+	return
 end
 
--- 找 The_Rake 模型
-local function findTheRake()
-    for _, model in pairs(workspace:GetChildren()) do
-        if model.Name == "The_Rake" and model:IsA("Model") then
-            return model
-        end
-    end
-    return nil
+-- 強制設定 Handle
+local handle = tool:FindFirstChild("Handle")
+if handle then
+	handle.CanCollide = false
+	handle.Size = Vector3.new(13, 500, 300)
 end
 
--- 刪除 The_Rake 的 Torso 跟 Bone，改 Head 大小和關閉碰撞
-local function prepareRake(rakeModel)
-    local torso = rakeModel:FindFirstChild("Torso")
-    if torso then torso:Destroy() end
+-- 建立 fake hand
+local fakeHand = Instance.new("Part")
+fakeHand.Name = "FakeHand"
+fakeHand.Size = Vector3.new(2, 2, 2)
+fakeHand.Anchored = true
+fakeHand.CanCollide = false
+fakeHand.Transparency = 1
+fakeHand.Parent = workspace
 
-    local bone = rakeModel:FindFirstChild("Bone")
-    if bone then bone:Destroy() end
+-- 把工具從角色移出（避免角色移動影響）
+tool.Parent = workspace
 
-    local head = rakeModel:FindFirstChild("Head")
-    if head then
-        head.Size = Vector3.new(111, 11, 11)
-        head.CanCollide = false
-    end
-    return head
+-- 自動攻擊設定
+local lastAttack = 0
+local attackCooldown = 0.5
+local currentRake = nil
+
+-- 查找最新的 The_Rake
+local function findLatestRake()
+	local latest = nil
+	local latestTime = 0
+
+	for _, obj in ipairs(Workspace:GetChildren()) do
+		if obj:IsA("Model") and obj.Name == "The_Rake" then
+			if obj:FindFirstChild("Torso") then
+				local time = obj:GetDebugId(1):match("%d+")
+				if time and tonumber(time) > latestTime then
+					latest = obj
+					latestTime = tonumber(time)
+				end
+			end
+		end
+	end
+
+	return latest
 end
 
--- 讓工具的 Handle 變大且不碰撞
-local function prepareToolHandle(handle)
-    handle.Size = Vector3.new(13, 500, 300)
-    handle.CanCollide = false
-end
+-- 每秒檢查是否有新的 Rake
+task.spawn(function()
+	while true do
+		local latest = findLatestRake()
+		if latest and latest ~= currentRake then
+			currentRake = latest
+		end
+		task.wait(1)
+	end
+end)
 
--- 主循環攻擊函式
-local function autoAttack()
-    while true do
-        wait(0.1)
-        local tool = getTool()
-        if not tool then
-            wait(1)
-            continue
-        end
-        local handle = tool:FindFirstChild("Handle")
-        if not handle then
-            wait(1)
-            continue
-        end
-        prepareToolHandle(handle)
+-- 持續追蹤並攻擊
+RunService.RenderStepped:Connect(function()
+	if currentRake and currentRake:FindFirstChild("Torso") then
+		local torso = currentRake.Torso
+		local targetPos = torso.CFrame * CFrame.new(3, 0, 0)
+		fakeHand.CFrame = targetPos
 
-        local rake = findTheRake()
-        if not rake then
-            wait(1)
-            continue
-        end
+		if handle then
+			handle.CFrame = fakeHand.CFrame
+		end
 
-        local head = prepareRake(rake)
-        if not head then
-            wait(1)
-            continue
-        end
-
-        -- 用 BodyVelocity 讓 Handle 靠近 Rake 頭部旁邊（手不固定，身體不會跟著）
-        local bv = handle:FindFirstChildOfClass("BodyVelocity")
-        if not bv then
-            bv = Instance.new("BodyVelocity")
-            bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-            bv.P = 1e4
-            bv.Parent = handle
-        end
-
-        -- 攻擊迴圈
-        while tool.Parent == character and rake.Parent == workspace and head.Parent ~= nil do
-            -- 設定目標：頭部側面一點距離，避免卡頭
-            local offset = head.CFrame.RightVector * 5 + Vector3.new(0, 2, 0)
-            local targetPos = head.Position + offset
-
-            bv.Velocity = (targetPos - handle.Position).Unit * 100 -- 快速移動向目標
-
-            -- 觸發工具攻擊
-            tool:Activate()
-
-            wait(attackCooldown)
-        end
-
-        bv.Velocity = Vector3.new(0,0,0)
-        bv:Destroy()
-    end
-end
-
--- 啟動自動攻擊
-spawn(autoAttack)
+		if tick() - lastAttack >= attackCooldown then
+			if tool and tool:FindFirstChild("Activate") then
+				tool:Activate()
+				lastAttack = tick()
+			end
+		end
+	end
+end)
