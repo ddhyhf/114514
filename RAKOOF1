@@ -1,0 +1,88 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- 找到 StunStick 工具
+local tool = player.Backpack:FindFirstChild("StunStick") or character:FindFirstChild("StunStick")
+if not tool then warn("找不到 StunStick") return end
+
+-- 找 Handle
+local handle = tool:FindFirstChild("Handle")
+if not handle then warn("Handle 不存在") return end
+
+-- 把 Tool 放在 workspace（避免玩家手部動畫干擾）
+tool.Parent = Workspace
+
+-- 改造 Handle
+handle.Size = Vector3.new(5, 5, 5)
+handle.Massless = true
+handle.CanCollide = false
+handle.Anchored = true
+
+-- 建立假手
+local fakeHand = Instance.new("Part")
+fakeHand.Anchored = true
+fakeHand.CanCollide = false
+fakeHand.Transparency = 1
+fakeHand.Size = Vector3.new(1, 1, 1)
+fakeHand.Name = "FakeHand"
+fakeHand.Parent = workspace
+
+-- 攻擊冷卻
+local lastAttack = 0
+local cooldown = 0.3
+
+-- 找到最新的 Rake
+local function getLatestRake()
+	local latest = nil
+	local latestId = 0
+	for _, model in ipairs(workspace:GetChildren()) do
+		if model:IsA("Model") and model.Name == "The_Rake" and model:FindFirstChild("Torso") then
+			local id = tonumber(model:GetDebugId(1):match("%d+")) or 0
+			if id > latestId then
+				latest = model
+				latestId = id
+			end
+		end
+	end
+	return latest
+end
+
+local currentRake = getLatestRake()
+task.spawn(function()
+	while true do
+		currentRake = getLatestRake()
+		task.wait(1)
+	end
+end)
+
+-- 工具碰撞打擊處理（只需設定一次）
+local function onTouched(hit)
+	local humanoid = hit and hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then
+		-- 工具通常自帶 Script 處理傷害，所以只需碰到就會有效
+		tool:Activate()
+	end
+end
+handle.Touched:Connect(onTouched)
+
+-- 每幀更新手與武器位置
+RunService.RenderStepped:Connect(function()
+	if currentRake and currentRake:FindFirstChild("Torso") then
+		local torso = currentRake.Torso
+		local attackPos = torso.Position + Vector3.new(1, 0, 0)
+
+		-- 手與武器移動到該位置
+		fakeHand.Position = attackPos
+		handle.CFrame = CFrame.new(attackPos)
+
+		-- 自動攻擊
+		if tick() - lastAttack >= cooldown then
+			tool:Activate()
+			lastAttack = tick()
+		end
+	end
+end)
