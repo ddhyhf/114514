@@ -1,0 +1,169 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
+
+local Window = Library:CreateWindow({
+    Title = "超新星面板",
+    Footer = "v1.0.1 - boplsme",
+    Icon = "rbxassetid://9158926514",
+    ToggleKeybind = Enum.KeyCode.RightControl,
+    Center = true,
+    AutoShow = true,
+    Resizable = false,
+    Size = UDim2.fromOffset(500, 400) -- ✅ UI 縮小
+})
+
+local MainTab = Window:AddTab("功能選單", "home")
+
+local TowerGroup = MainTab:AddLeftGroupbox("塔選擇")
+local StatsGroup = MainTab:AddRightGroupbox("資訊")
+
+-- 收集塔資料
+local towersFolder = game:GetService("ReplicatedStorage"):WaitForChild("Towers")
+local towerEntries, dropdownOptions = {}, {}
+for _, tower in ipairs(towersFolder:GetChildren()) do
+    if tower.Name ~= "Upgrade" and tower:FindFirstChild("Config") then
+        local cfg = tower.Config
+        if cfg:FindFirstChild("Price") and cfg:FindFirstChild("Damage") and cfg:FindFirstChild("Range") and cfg:FindFirstChild("Cooldown") then
+            table.insert(towerEntries, {
+                Name = tower.Name,
+                Label = string.format("%s（%d金）", tower.Name, cfg.Price.Value),
+                Config = {
+                    Price = cfg.Price.Value,
+                    Damage = cfg.Damage.Value,
+                    Range = cfg.Range.Value,
+                    Cooldown = cfg.Cooldown.Value,
+                }
+            })
+            table.insert(dropdownOptions, string.format("%s（%d金）", tower.Name, cfg.Price.Value))
+        end
+    end
+end
+
+local selectedIndex, placeOnPlayer, placeRandom = 1, true, false
+
+-- 標籤
+local nameLabel     = StatsGroup:AddLabel("名稱：")
+local damageLabel   = StatsGroup:AddLabel("傷害：")
+local rangeLabel    = StatsGroup:AddLabel("範圍：")
+local priceLabel    = StatsGroup:AddLabel("價格：")
+local cooldownLabel = StatsGroup:AddLabel("冷卻：")
+
+local function updateLabel(lbl, text)
+    lbl:SetText(text)
+    if lbl.TextLabel then lbl.TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255) end
+end
+
+local function updateStats(i)
+    local e = towerEntries[i]
+    if not e then return end
+    updateLabel(nameLabel,     "名稱：" .. e.Name)
+    updateLabel(priceLabel,    "價格：" .. e.Config.Price)
+    updateLabel(damageLabel,   "傷害：" .. e.Config.Damage)
+    updateLabel(rangeLabel,    "範圍：" .. e.Config.Range)
+    updateLabel(cooldownLabel, "冷卻：" .. e.Config.Cooldown)
+end
+
+TowerGroup:AddDropdown("TowerDropdown", {
+    Values = dropdownOptions,
+    Default = dropdownOptions[1],
+    Text = "選塔",
+    Callback = function(v)
+        for i, lbl in ipairs(dropdownOptions) do
+            if lbl == v then
+                selectedIndex = i
+                updateStats(i)
+                break
+            end
+        end
+    end
+})
+
+TowerGroup:AddToggle("PlaceInPlayerToggle", {
+    Text = "玩家位置",
+    Default = true,
+    Callback = function(state)
+        placeOnPlayer = state
+        if state then
+            placeRandom = false
+            TowerGroup:SetToggleState("PlaceRandomToggle", false)
+        end
+    end
+})
+
+TowerGroup:AddToggle("PlaceRandomToggle", {
+    Text = "隨機位置",
+    Default = false,
+    Callback = function(state)
+        placeRandom = state
+        if state then
+            placeOnPlayer = false
+            TowerGroup:SetToggleState("PlaceInPlayerToggle", false)
+        end
+    end
+})
+
+local function getGroundCFrame(position)
+    local rayOrigin = position + Vector3.new(0, 50, 0)
+    local rayDir = Vector3.new(0, -100, 0)
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {game.Players.LocalPlayer.Character}
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    local result = workspace:Raycast(rayOrigin, rayDir, params)
+    return result and CFrame.new(result.Position) or CFrame.new(position)
+end
+
+TowerGroup:AddButton({
+    Text = "放置",
+    Func = function()
+        local e = towerEntries[selectedIndex]
+        if not e then return Library:Notify("未選擇塔", 2) end
+
+        local ok1, err1 = pcall(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("Functions"):WaitForChild("RequestTower"):InvokeServer(e.Name)
+        end)
+        if not ok1 then return Library:Notify("申請失敗：" .. tostring(err1), 3) end
+
+        local cf
+        if placeOnPlayer then
+            local root = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return Library:Notify("角色未準備", 2) end
+            cf = getGroundCFrame(root.Position)
+        elseif placeRandom then
+            cf = getGroundCFrame(Vector3.new(math.random(-100,100), 50, math.random(-100,100)))
+        else
+            cf = getGroundCFrame(workspace.CurrentCamera.CFrame.Position + workspace.CurrentCamera.CFrame.LookVector * 10)
+        end
+
+        local ok2, err2 = pcall(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("Functions"):WaitForChild("SpawnTower"):InvokeServer(e.Name, cf)
+        end)
+        Library:Notify(ok2 and "已放置："..e.Name or "放置失敗："..tostring(err2), 2)
+    end
+})
+
+if #towerEntries > 0 then updateStats(1) end
+
+StatsGroup:AddButton({
+    Text = "建議塔",
+    Func = function()
+        local cash = game.Players.LocalPlayer:FindFirstChild("leaderstats") and game.Players.LocalPlayer.leaderstats:FindFirstChild("Cash")
+        if not cash then return Library:Notify("找不到金錢", 2) end
+
+        local bestIndex, bestScore = nil, -math.huge
+        for i, e in ipairs(towerEntries) do
+            local p, d, r, cd = e.Config.Price, e.Config.Damage, e.Config.Range, e.Config.Cooldown
+            if p <= cash.Value then
+                local score = (d * r) / (cd * p)
+                if score > bestScore then bestScore = score; bestIndex = i end
+            end
+        end
+
+        if bestIndex then
+            selectedIndex = bestIndex
+            updateStats(bestIndex)
+            TowerGroup:SetDropdownValue("TowerDropdown", dropdownOptions[bestIndex])
+            Library:Notify("建議使用：" .. towerEntries[bestIndex].Name, 3)
+        else
+            Library:Notify("沒有可負擔的塔", 3)
+        end
+    end
+})
