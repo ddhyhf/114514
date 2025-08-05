@@ -1,0 +1,140 @@
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Events 路徑
+local scratchCardFolder = ReplicatedStorage:WaitForChild("Events"):WaitForChild("ScratchCard")
+local newCardEvent = scratchCardFolder:WaitForChild("NewCard")
+local openCardEvent = scratchCardFolder:WaitForChild("OpenCard")
+
+-- UI 建立
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ScratchCardGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 420, 0, 320)
+frame.Position = UDim2.new(0.5, -210, 0.5, -160)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+-- 標題
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -20, 0, 40)
+titleLabel.Position = UDim2.new(0, 10, 0, 10)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.new(1, 1, 1)
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 28
+titleLabel.Text = "卡片號碼：等待資料..."
+titleLabel.Parent = frame
+
+-- 卡片資料列表 (滾動區域)
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(1, -20, 0, 200)
+scrollingFrame.Position = UDim2.new(0, 10, 0, 60)
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0) -- 會後面設定
+scrollingFrame.ScrollBarThickness = 8
+scrollingFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.Parent = frame
+
+-- 模板項目（隱藏用）
+local templateLabel = Instance.new("TextLabel")
+templateLabel.Size = UDim2.new(1, 0, 0, 30)
+templateLabel.BackgroundTransparency = 0.5
+templateLabel.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+templateLabel.BorderSizePixel = 0
+templateLabel.TextColor3 = Color3.new(1, 1, 1)
+templateLabel.Font = Enum.Font.SourceSans
+templateLabel.TextSize = 20
+templateLabel.TextXAlignment = Enum.TextXAlignment.Left
+templateLabel.Visible = false
+templateLabel.Parent = scrollingFrame
+
+-- 開啟卡片按鈕
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.new(0, 140, 0, 50)
+openButton.Position = UDim2.new(0.5, -70, 1, -60)
+openButton.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+openButton.TextColor3 = Color3.new(1, 1, 1)
+openButton.Font = Enum.Font.SourceSansBold
+openButton.TextSize = 24
+openButton.Text = "開啟卡片"
+openButton.Parent = frame
+
+-- TweenInfo
+local tweenInfo = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- 本地狀態
+local currentNumber = nil
+local cardDataList = {}
+
+-- 顯示卡片資料列表
+local function displayCardData(data)
+    -- 清空舊列表
+    scrollingFrame:ClearAllChildren()
+    templateLabel.Parent = scrollingFrame
+
+    for i, v in ipairs(data) do
+        local item = templateLabel:Clone()
+        item.Name = "Item_" .. i
+        item.Text = tostring(i) .. ". " .. tostring(v)
+        item.Visible = true
+        item.Position = UDim2.new(0, 0, 0, 30 * (i - 1))
+        item.Parent = scrollingFrame
+    end
+
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #data * 30)
+end
+
+-- 動畫淡入
+local function fadeIn()
+    screenGui.Enabled = true
+    frame.BackgroundTransparency = 1
+    local tween = TweenService:Create(frame, tweenInfo, {BackgroundTransparency = 0})
+    tween:Play()
+end
+
+-- 動畫淡出
+local function fadeOut(callback)
+    local tween = TweenService:Create(frame, tweenInfo, {BackgroundTransparency = 1})
+    tween:Play()
+    tween.Completed:Connect(function()
+        if callback then
+            callback()
+        end
+    end)
+end
+
+-- 點擊按鈕事件
+openButton.MouseButton1Click:Connect(function()
+    if currentNumber then
+        print("[ScratchCard] 發送 OpenCard:", currentNumber)
+        openCardEvent:FireServer(currentNumber)
+        fadeOut(function()
+            screenGui:Destroy()
+        end)
+    else
+        warn("[ScratchCard] 尚未有卡號，無法開啟")
+    end
+end)
+
+-- 監聽伺服器 NewCard 事件
+newCardEvent.OnClientEvent:Connect(function(data, number)
+    print("[ScratchCard] 收到卡片資料:", data, number)
+    currentNumber = number
+    cardDataList = data
+
+    titleLabel.Text = "卡片號碼：" .. tostring(number)
+    displayCardData(data)
+    fadeIn()
+end)
+
+-- 一開始先隱藏 UI
+screenGui.Enabled = false
