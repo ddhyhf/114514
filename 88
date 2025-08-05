@@ -1,0 +1,65 @@
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- 取得 ScratchCard 事件資料夾和事件
+local scratchCardFolder = ReplicatedStorage:WaitForChild("Events"):WaitForChild("ScratchCard")
+local newCardEvent = scratchCardFolder:WaitForChild("NewCard")
+local openCardEvent = scratchCardFolder:WaitForChild("OpenCard")
+
+-- 建立簡易UI（屏幕中心）
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ScratchCardGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Name = "MainFrame"
+frame.Size = UDim2.new(0, 400, 0, 300)
+frame.Position = UDim2.new(0.5, -200, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Name = "MyNumber"
+textLabel.Size = UDim2.new(1, 0, 0, 40)
+textLabel.Position = UDim2.new(0, 0, 0, 10)
+textLabel.BackgroundTransparency = 1
+textLabel.TextColor3 = Color3.new(1, 1, 1)
+textLabel.Font = Enum.Font.SourceSansBold
+textLabel.TextSize = 32
+textLabel.Text = "等待卡片資料..."
+textLabel.Parent = frame
+
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 100, 0, 40)
+closeButton.Position = UDim2.new(0.5, -50, 1, -50)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.TextColor3 = Color3.new(1, 1, 1)
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.TextSize = 24
+closeButton.Text = "開啟卡片"
+closeButton.Parent = frame
+
+local function clearUI()
+    if screenGui then
+        screenGui:Destroy()
+    end
+end
+
+-- 監聽 NewCard 事件
+newCardEvent.OnClientEvent:Connect(function(cardData, myNumber)
+    -- 顯示數字
+    textLabel.Text = "你的卡號: " .. tostring(myNumber)
+
+    -- 這裡你可以加上更完整的卡片資料顯示邏輯
+
+    -- 點擊按鈕時，向伺服器發送 OpenCard 事件
+    closeButton.MouseButton1Click:Connect(function()
+        openCardEvent:FireServer(myNumber)
+        clearUI()
+    end)
+end)
