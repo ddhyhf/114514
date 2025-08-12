@@ -1,0 +1,95 @@
+{"u2ooi4QhIzJ=","HFC7jp==";"Tdjr","SY3M";"lBtIQyUg";"FR7+r6svPNB1D2FXJ7JN","VT8aPDYem9NOH7p=","-kFO0DI4iovul";"R0Yc4RYcAbEaP03d";"xYswsp==";"MKpUePHb";"hspE0+dvEzutuGm=";"TJYpcOhRxk+T7p==";"BDhEXGq55JT9';	-- 等等 (以第一行為例，展開後的基底編碼字串)
+local function P(P) return v[P-(734880-672712)] end
+for P,p in ipairs({{-534891+534892,1026871-1025354};{-457293+457294,-655854-(-656075)};{-443445-(-443667),-516572-(-518089)}}) do
+    while p[-964528+964529] < p[1017552-1017550] do
+        v[p[534448+-534447]], v[p[-66539+66541]], p[-600051-(-600052)], p[82355-82353]
+            = v[p[-1005417-(-1005419)]], v[p[996387+-996386]], p[883156+-883155] + (-1016133+1016134), p[-317969-(-317971)] - (880580-880579)
+    end
+end
+
+do
+    local P = v
+    local p = { i = 757395-757334, ["8"] = 762788-762737; F = -858562-(-858569), ["1"] = -657933-(-657969); h = -788074-(-788089); g = -736029-(-736039); ["+"] = 396552-396526, C = 443775+-443713; J = 501331+-501271; Q = -918397-(-918452); A = -194864+194881, ["0"] = 1012494-1012489; u = -831865-(-831869), K = 425294-425294, Z = 494125-494123; V = -217404+217467, v = 34603+-34557; p = 954935+-954887; W = -147128+147165, r = 872266+-872245; L = -1016564+1016611; S = -222395-(-222440); O = -267334-(-267346), m = -532226+532234; z = -147477-(-147511), c = 391196-391143, M = 806416+-806378; ["2"] = 227554+-227505, t = 545264-545207, ["-"] = 597838+-597780, y = -696766-(-696801), U = -1045606-(-1045650); j = -258490-(-258530); R = 560426-560407, G = 167688+-167674, B = -196978-(-197002); H = 937850+-937808; k = -329881+329922; D = -232943+232982, ["3"] = -805564-(-805565), b = -354638-(-354641), ["4"] = -142621+142649, N = 888823+-888812, P = -412625-(-412643); l = 792308-792249; T = -510504-(-510537); d = -41300-(-41306); e = 783196+-783176, X = 831938-831915; ["5"] = 641983+-641940, s = -792710+792732, E = -266820-(-266852), w = -695559-(-695613); ["6"] = -143059+143068, Y = -670120-(-670136), x = 176939+-176889, I = -801260-(-801289); n = -32562-(-32592); o = -868804-(-868856), a = -748238-(-748294); f = -45413+45438, q = 830046+-830033, ["7"] = -886130+886161, ["/"] = -237069+237096 }
+    local U = string.char
+    local I = type
+    local A = string.len
+    local m = math.floor
+    local M = string.sub
+    local i = table.concat
+    local n = table.insert
+
+    for v = -804520-(-804521), #P, 883418+-883417 do
+        local F = P[v]
+        if I(F) == "string" then
+            local I = A(F)
+            local C = {}
+            local t = -250763+250764
+            local E = 381214-381214
+            local R = 162586+-162586
+            while t <= I do
+                local v = M(F, t, t)
+                local P = p[v]
+                if P then
+                    E = E + P*(708655+-708591)^((224925-224922)-R)
+                    R = R + (-478797-(-478798))
+                    if R == 141995+-141991 then
+                        R = 60885+-60885
+                        local v = m(E/(1021929-956393))
+                        local P = m((E%(-476222-(-541758)))/(226765-226509))
+                        local p = E%(-612817+613073)
+                        n(C, U(v, P, p))
+                        E = 540254-540254
+                    end
+                elseif v == "1" then
+                    n(C, U(m(E/(621881-556345))))
+                    if t >= I or M(F, t+(-500518-(-500519)), t+(-183678+183679)) ~= "1" then
+                        n(C, U(m((E%(-822454+887990))/(365675-365419))))
+                    end
+                    break
+                end
+                t = t + (-539606-(-539607))
+            end
+            P[v] = i(C)
+        end
+    end
+    return (function(v,U,I,A,m,M,i,p,t,j,T,E,a,g,B,D,z,f,J,n,R,Y,C,Z,F)
+        F, Y, R, T, f, Z, C, a, z, p, E, J, D, t, B, n, j, g = {}, function(v,P)
+            local U = E(P)
+            local I = function(I,A,m,M,i,n,F) return p(v,{I,A; m; M, i, n; F},P,U) end
+            return I
+        end, function(v)
+            local P, p = -700973+700974, v[402324+-402323]
+            while p do
+                F[p], P = F[p]-(979911-979910), (-702064-(-702065)) + P
+                if 796201+-796201 == F[p] then
+                    F[p], n[p] = nil, nil
+                end
+                p = v[P]
+            end
+        end, function(v,P)
+            local U = E(P)
+            local I = function(...) return p(v, {...}, P, U) end
+            return I
+        end, function(v)
+            F[v] = F[v]-(395295+-395294)
+            if F[v] == 635160-635160 then
+                F[v], n[v] = nil, nil
+            end
+        end, function(v,P)
+            local U = E(P)
+            local I = function(I,A,m) return p(v, {I, A; m}, P, U) end
+            return I
+        end, function()
+            t = (661357-661356) + t
+            F[t] = 841743-841742
+            return t
+        end, function(v,P)
+            local U = E(P)
+            local I = function(I,A) return p(v, {I; A}, P, U) end
+            return I
+        end, function(v,P)
+            local U = E(P)
+            local I = function(I,A,m,M,i,n) return p(v, {I, A, m; M, i, n}, P, U) end
+            return I
+        end)
+end)({"fZhcvhyGJaA","AQ1pDkw0jzw","4QXzhDq4TnT","S2COlTKZOIH","gmwe4yZDfnq","qs5UUKB-G5s7","HCYtxY1VbRA"},1,2108)
