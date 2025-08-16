@@ -1,0 +1,93 @@
+-- 儲存全局環境
+local env = _ENV
+
+-- 原始加密資料（此處為示例，實際內容需解碼）
+local encrypted_data1 = '/7w %.4KBpF#c,=a.K4wp c%aKwc.KBB#p.,Ba#==47c%47w%#KwF ,%b ,=w44...'
+-- 另一組加密資料
+local encrypted_data2 = '2>{BvIKGl^qNO(.M>qBIG^^vqMOG(^{.>^BBIvl{G.qqN>l{^^._{qIlK{l^l(l{q>Oqlqq>.^>qBvGhK.ll^OO>.(^{qNM{e({{I.GM^GNBqOMB.>{qOq.{{MvlGl^>O{.G(>Mq{?Bv.q*IvqKGlT^GN>(l>M{vB.vIIvKlq^I{KON>Oq.KV)IlK>KvlqlGq((((vq{NNnK>NBvKBlFl((BO.MO_q>4(qMBBOIvG>N{(^.KMNMGJN{vvM>{{(GvlqqKNM(vj({>K>KKlKGOlOOGGq^B(^MKzqIKGBlIlININ;.(M{N{ON>>{MvlK.^IO>NNM^AGB{{M.qZBvMKKGlOO.{_B>5>i>qBGKN{{B(lv^NNv(y.l>lBlv{KGKMql^^N>lqqv.^+^>NBll.^GqMOO.M(B>^&v(qMBv>IKG>NBN>(B..MvT^I5KD>{{NGll(qv(k.O{B'
+
+-- 解混淆所需的查找表（由原始代碼自動構造）
+local lookup = {
+    "BmxzYButty#6Dx#Y Be> *yDmx060Bt6BY>uxD 66Y 6*B6DzzyD0Du>Y u*tu>y zY#mzDxB>B",
+    "mYuxY6 mx#BD6zBz6DDz... (以下省略)",
+    -- 共13組長字符串（最後一組可視為空字符串，忽略）
+}
+
+-- Luraph 虛擬機代碼（執行後將在 env 中注入必要函數和數據）
+local function luraphVM()
+    -- VM 處理器和表的初始化邏輯（此處為概要）
+    -- 例如，根據上面的查找表 self._oXfzJfj、self._cfEehTF 等函數會被定義到全局表 r
+    -- 真實代碼將包含多層循環和條件，如 getfenv() 獲取全局環境等
+    -- （省略具體實現，因為其為 Luraph VM 的內部邏輯）
+end
+luraphVM()  -- 執行 VM 初始化
+
+-- 根據 VM 中生成的映射函數構造對稱加解密的 S-Box
+-- 原始代碼中：for n=0x0,0xff do local t=r._oXfzJfj(n) ... end
+local e_map = {}
+for i = 0, 0xFF do
+    local j = r._oXfzJfj(i)  -- VM 生成的置換函數
+    e_map[i] = j
+    e_map[j] = i
+end
+
+-- 解密函數（從原始匿名函數還原並改寫）
+-- o: 初始偏移值，f: 加密字符串
+local function decrypt(o, f)
+    local h, t = 1, 16
+    local n = {{}, {}, {}}  -- 用於中間數據存儲
+    local d = -1
+    -- 找到真正的十六進位數據分界點
+    local L = #f
+    while h <= L and f:sub(h,h) == "/" do
+        h = h + 1
+        if h <= L and f:sub(h,h) == "/" then
+            -- 如果兩個斜線，刪除後面部分
+            f = f:sub(1,h-1)
+            break
+        end
+    end
+    -- 將字符串分為十六進位部分和實際內容
+    local hex_prefix = f:sub(1, h-1)
+    local text_part = f:sub(h+1)
+    local num_a = tonumber(hex_prefix) or tonumber(hex_prefix, 16)
+    local num_b = tonumber(text_part) or tonumber(text_part, 16)
+    -- 重置索引，用於解析加密內容
+    h = 1
+    local idx = h
+    -- 處理前15個字節作為標記
+    while h <= L and idx <= L do
+        n[3][t] = r.nAoygOnE(f, idx, (function() idx = h + idx; return idx-1 end)())
+        d = d + 1
+        if d == 15 then
+            d = ""  -- 重置計數並退出初始處理階段
+            t = 0
+            break
+        end
+    end
+    -- 處理剩餘字節
+    while idx <= L do
+        n[2][t] = r.nAoygOnE(f, idx, (function() idx = h + idx; return idx-1 end)())
+        t = t + 1
+        if t % 2 == 0 then
+            t = 0
+            -- 使用 r.AnVXTfIW 處理前兩個生成的值，並加入 S-Box
+            r.AnVXTfIW(n[1], ( (n[3][n[2][0]] or 0)*0x10 + (n[3][n[2][1]] or 0) + o ) % 0x100 )
+            o = o + idx
+        end
+    end
+    -- 返回最終結果（實際上是對 n[1] 的轉換）
+    return r.yXKGJVkk(n[1])
+end
+
+-- 調用解密函數對加密數據進行還原
+local decrypted_script = decrypt(232, encrypted_data2)
+-- 通常原始代碼會使用類似 env.qDdfwCcP() 來執行或載入解碼後的腳本
+env.qDdfwCcP(decrypted_script)
+
+
+local meaningfulValue = num_a + num_b  -- 示例邏輯
+function meaningfulFunction(x)
+    -- ... 邏輯代碼 ...
+    return x + meaningfulValue
+end
