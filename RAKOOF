@@ -1,5 +1,4 @@
--- LocalScript：按 L 開啟/關閉循環刪除 The_Rake 的 Torso + 玩家循環傳送
--- 支援玩家死亡後重生仍然生效
+-- LocalScript：按 L 開啟/關閉循環刪除 The_Rake 的 Torso + 玩家循環傳送到上方
 -- 放在 StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -10,29 +9,23 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local rootPart = nil
 local featureEnabled = false -- 初始關閉
+local TELEPORT_HEIGHT = 5 -- 傳送到物體上方高度
 
 -- 當角色生成或重生時更新 rootPart
 local function onCharacterAdded(char)
-	-- 清掉舊的 rootPart 引用（保險）
 	rootPart = nil
-	-- 等待 HumanoidRootPart（如果沒有會等到建立）
 	local ok, rp = pcall(function() return char:WaitForChild("HumanoidRootPart", 5) end)
 	if ok and rp then
 		rootPart = rp
-	else
-		-- 若超時或沒有 root，rootPart 保持 nil；傳送會被跳過
-		rootPart = nil
 	end
 end
 
--- 初次如果角色已存在就註冊
 if player.Character then
 	onCharacterAdded(player.Character)
 end
--- 每次重生都更新
 player.CharacterAdded:Connect(onCharacterAdded)
 
--- 函式：取得地圖中所有 The_Rake 模型
+-- 取得地圖中所有 The_Rake 模型
 local function getRakeModels()
 	local rakes = {}
 	for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -43,53 +36,50 @@ local function getRakeModels()
 	return rakes
 end
 
--- 函式：刪除 The_Rake 的 Torso
+-- 刪除 The_Rake 的 Torso
 local function removeTorso(rake)
 	if not rake then return end
 	local torso = rake:FindFirstChild("Torso")
 	if torso then
 		torso:Destroy()
-		-- 可改用 print/warn 以利偵錯
 		print("已刪除 The_Rake 的 Torso。 (", rake:GetFullName(), ")")
 	end
 end
 
--- 函式：將玩家傳送到 The_Rake（若 rootPart 有效）
-local function teleportToRakePart(rake)
+-- 傳送玩家到 The_Rake 上方 TELEPORT_HEIGHT
+local function teleportToRakeAbove(rake)
 	if not rake then return end
-	if not rootPart then return end -- 玩家死亡或尚未生成時跳過
+	if not rootPart then return end
 
-	-- 優先用 PrimaryPart，沒有就用模型中心
-	local targetCFrame
+	-- 優先用 PrimaryPart 或模型中心
+	local basePosition
 	if rake.PrimaryPart then
-		targetCFrame = rake.PrimaryPart.CFrame
+		basePosition = rake.PrimaryPart.Position
 	else
-		targetCFrame = CFrame.new(rake:GetModelCFrame().p)
+		basePosition = rake:GetModelCFrame().p
 	end
 
-	-- 安全操作（避免在角色沒 HumanoidRootPart 時出錯）
+	-- 加上高度偏移
+	local targetCFrame = CFrame.new(basePosition + Vector3.new(0, TELEPORT_HEIGHT, 0))
 	if rootPart and rootPart:IsA("BasePart") then
-		rootPart.CFrame = targetCFrame + Vector3.new(0, 5, 0)
+		rootPart.CFrame = targetCFrame
 	end
 end
 
--- 每幀檢測循環（只綁一次）
+-- 每幀循環
 RunService.RenderStepped:Connect(function()
 	if featureEnabled then
 		local rakes = getRakeModels()
 		for _, rake in ipairs(rakes) do
-			-- 刪除 Torso（即便 Torso 被刪了也沒事）
 			removeTorso(rake)
-
-			-- 傳送玩家到 The_Rake（如果玩家存在且有 rootPart）
-			teleportToRakePart(rake)
+			teleportToRakeAbove(rake)
 		end
 	end
 end)
 
--- 按 L 切換開關（Input 監聽只綁一次）
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
+-- L 鍵切換開關
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
 	if input.KeyCode == Enum.KeyCode.L then
 		featureEnabled = not featureEnabled
 		print("循環刪除 Torso + 玩家傳送功能已 " .. (featureEnabled and "開啟" or "關閉"))
