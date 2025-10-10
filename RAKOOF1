@@ -1,0 +1,60 @@
+-- LocalScript：按 L 開啟/關閉循環刪除 The_Rake 的 Torso + 玩家循環傳送
+-- 放在 StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart") -- 玩家核心位置
+
+local featureEnabled = false -- 初始關閉
+
+-- 函式：取得地圖中所有 The_Rake 模型
+local function getRakeModels()
+	local rakes = {}
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Model") and obj.Name == "The_Rake" then
+			table.insert(rakes, obj)
+		end
+	end
+	return rakes
+end
+
+-- 函式：刪除 The_Rake 的 Torso
+local function removeTorso(rake)
+	if not rake then return end
+	local torso = rake:FindFirstChild("Torso")
+	if torso then
+		torso:Destroy()
+		print("已刪除 The_Rake 的 Torso。")
+	end
+end
+
+-- 每幀檢測循環
+RunService.RenderStepped:Connect(function()
+	if featureEnabled then
+		local rakes = getRakeModels()
+		for _, rake in ipairs(rakes) do
+			-- 刪除 Torso
+			removeTorso(rake)
+
+			-- 傳送玩家到 The_Rake
+			local targetPart = rake:FindFirstChild("HumanoidRootPart") or rake:FindFirstChild("Torso")
+			if targetPart then
+				rootPart.CFrame = targetPart.CFrame + Vector3.new(0, 5, 0) -- 偏移 5 避免卡住
+			end
+		end
+	end
+end)
+
+-- 按 L 切換開關
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	if input.KeyCode == Enum.KeyCode.L then
+		featureEnabled = not featureEnabled
+		print("循環刪除 Torso + 玩家傳送功能已 " .. (featureEnabled and "開啟" or "關閉"))
+	end
+end)
