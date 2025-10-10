@@ -1,88 +1,79 @@
+-- LocalScript：L 開啟/關閉循環刪除 Torso + 循環傳送
+--              O 立即傳送到 The_Rake 模型位置（不需 Torso/HumanoidRootPart）
+-- 放在 StarterPlayerScripts
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- 找到 StunStick 工具
-local tool = player.Backpack:FindFirstChild("StunStick") or character:FindFirstChild("StunStick")
-if not tool then warn("找不到 StunStick") return end
+local featureEnabled = false -- L 鍵循環開關
 
--- 找 Handle
-local handle = tool:FindFirstChild("Handle")
-if not handle then warn("Handle 不存在") return end
-
--- 把 Tool 放在 workspace（避免玩家手部動畫干擾）
-tool.Parent = Workspace
-
--- 改造 Handle
-handle.Size = Vector3.new(5, 5, 5)
-handle.Massless = true
-handle.CanCollide = false
-handle.Anchored = true
-
--- 建立假手
-local fakeHand = Instance.new("Part")
-fakeHand.Anchored = true
-fakeHand.CanCollide = false
-fakeHand.Transparency = 1
-fakeHand.Size = Vector3.new(1, 1, 1)
-fakeHand.Name = "FakeHand"
-fakeHand.Parent = workspace
-
--- 攻擊冷卻
-local lastAttack = 0
-local cooldown = 0.3
-
--- 找到最新的 Rake
-local function getLatestRake()
-	local latest = nil
-	local latestId = 0
-	for _, model in ipairs(workspace:GetChildren()) do
-		if model:IsA("Model") and model.Name == "The_Rake" and model:FindFirstChild("Torso") then
-			local id = tonumber(model:GetDebugId(1):match("%d+")) or 0
-			if id > latestId then
-				latest = model
-				latestId = id
-			end
+-- 函式：取得地圖中所有 The_Rake 模型
+local function getRakeModels()
+	local rakes = {}
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Model") and obj.Name == "The_Rake" then
+			table.insert(rakes, obj)
 		end
 	end
-	return latest
+	return rakes
 end
 
-local currentRake = getLatestRake()
-task.spawn(function()
-	while true do
-		currentRake = getLatestRake()
-		task.wait(1)
+-- 函式：刪除 The_Rake 的 Torso
+local function removeTorso(rake)
+	if not rake then return end
+	local torso = rake:FindFirstChild("Torso")
+	if torso then
+		torso:Destroy()
+		print("已刪除 The_Rake 的 Torso。")
+	end
+end
+
+-- 函式：傳送玩家到 The_Rake
+local function teleportToRake(rake)
+	if not rake then return end
+	-- 取模型的 PrimaryPart，如果沒有就取模型的 Position（CFrame）
+	local targetCFrame
+	if rake.PrimaryPart then
+		targetCFrame = rake.PrimaryPart.CFrame
+	else
+		targetCFrame = CFrame.new(rake:GetModelCFrame().p) -- 使用模型中心
+	end
+	rootPart.CFrame = targetCFrame + Vector3.new(0,5,0) -- 偏移 5 避免卡住
+end
+
+-- 每幀循環（L 開關控制）
+RunService.RenderStepped:Connect(function()
+	if featureEnabled then
+		local rakes = getRakeModels()
+		for _, rake in ipairs(rakes) do
+			-- 循環刪除 Torso
+			removeTorso(rake)
+			-- 循環傳送玩家
+			teleportToRake(rake)
+		end
 	end
 end)
 
--- 工具碰撞打擊處理（只需設定一次）
-local function onTouched(hit)
-	local humanoid = hit and hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.Health > 0 then
-		-- 工具通常自帶 Script 處理傷害，所以只需碰到就會有效
-		tool:Activate()
-	end
-end
-handle.Touched:Connect(onTouched)
-
--- 每幀更新手與武器位置
-RunService.RenderStepped:Connect(function()
-	if currentRake and currentRake:FindFirstChild("Torso") then
-		local torso = currentRake.Torso
-		local attackPos = torso.Position + Vector3.new(1, 0, 0)
-
-		-- 手與武器移動到該位置
-		fakeHand.Position = attackPos
-		handle.CFrame = CFrame.new(attackPos)
-
-		-- 自動攻擊
-		if tick() - lastAttack >= cooldown then
-			tool:Activate()
-			lastAttack = tick()
+-- 按鍵監聽
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	if input.KeyCode == Enum.KeyCode.L then
+		featureEnabled = not featureEnabled
+		print("循環刪除 Torso + 玩家傳送功能已 " .. (featureEnabled and "開啟" or "關閉"))
+	elseif input.KeyCode == Enum.KeyCode.O then
+		-- 按 O 立即傳送到第一個找到的 The_Rake
+		local rakes = getRakeModels()
+		if #rakes > 0 then
+			teleportToRake(rakes[1])
+			print("已立即傳送到 The_Rake。")
+		else
+			print("找不到 The_Rake。")
 		end
 	end
 end)
