@@ -9,7 +9,7 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local rootPart = nil
 local featureEnabled = false -- 初始關閉
-local TELEPORT_HEIGHT = 5 -- 傳送到物體上方高度
+local TELEPORT_HEIGHT = 50 -- 傳送到物體上方高度
 
 -- 當角色生成或重生時更新 rootPart
 local function onCharacterAdded(char)
