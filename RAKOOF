@@ -1,0 +1,87 @@
+-- LocalScript：按 L 開啟/關閉循環刪除 The_Rake 的 Torso + 玩家循環傳送到上方
+-- 放在 StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local rootPart = nil
+local featureEnabled = false -- 初始關閉
+local TELEPORT_HEIGHT = 50 -- 傳送到物體上方高度
+
+-- 當角色生成或重生時更新 rootPart
+local function onCharacterAdded(char)
+	rootPart = nil
+	local ok, rp = pcall(function() return char:WaitForChild("HumanoidRootPart", 5) end)
+	if ok and rp then
+		rootPart = rp
+	end
+end
+
+if player.Character then
+	onCharacterAdded(player.Character)
+end
+player.CharacterAdded:Connect(onCharacterAdded)
+
+-- 取得地圖中所有 The_Rake 模型
+local function getRakeModels()
+	local rakes = {}
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("Model") and obj.Name == "The_Rake" then
+			table.insert(rakes, obj)
+		end
+	end
+	return rakes
+end
+
+-- 刪除 The_Rake 的 Torso
+local function removeTorso(rake)
+	if not rake then return end
+	local torso = rake:FindFirstChild("Torso")
+	if torso then
+		torso:Destroy()
+		print("已刪除 The_Rake 的 Torso。 (", rake:GetFullName(), ")")
+	end
+end
+
+-- 傳送玩家到 The_Rake 上方 TELEPORT_HEIGHT
+local function teleportToRakeAbove(rake)
+	if not rake then return end
+	if not rootPart then return end
+
+	-- 優先用 PrimaryPart 或模型中心
+	local basePosition
+	if rake.PrimaryPart then
+		basePosition = rake.PrimaryPart.Position
+	else
+		basePosition = rake:GetModelCFrame().p
+	end
+
+	-- 加上高度偏移
+	local targetCFrame = CFrame.new(basePosition + Vector3.new(0, TELEPORT_HEIGHT, 0))
+	if rootPart and rootPart:IsA("BasePart") then
+		rootPart.CFrame = targetCFrame
+	end
+end
+
+-- 每幀循環
+RunService.RenderStepped:Connect(function()
+	if featureEnabled then
+		local rakes = getRakeModels()
+		for _, rake in ipairs(rakes) do
+			removeTorso(rake)
+			teleportToRakeAbove(rake)
+		end
+	end
+end)
+
+-- L 鍵切換開關
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.L then
+		featureEnabled = not featureEnabled
+		print("循環刪除 Torso + 玩家傳送功能已 " .. (featureEnabled and "開啟" or "關閉"))
+	end
+end)
