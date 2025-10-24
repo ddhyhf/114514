@@ -1,0 +1,107 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ClawUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Position = UDim2.new(0, 100, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+frame.Active = true
+frame.Draggable = true
+
+local inputBox = Instance.new("輸入名稱")
+inputBox.Size = UDim2.new(0, 140, 0, 30)
+inputBox.Position = UDim2.new(0, 10, 0, 10)
+inputBox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+inputBox.Font = Enum.Font.SourceSansBold
+inputBox.TextSize = 18
+inputBox.PlaceholderText = "輸入名稱"
+inputBox.Parent = frame
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 140, 0, 30)
+button.Position = UDim2.new(0, 10, 0, 50)
+button.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+button.Text = "傳送"
+button.Parent = frame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 30, 0, 30)
+toggleButton.Position = UDim2.new(1, 0, 0, 0)
+toggleButton.AnchorPoint = Vector2.new(1, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleButton.Text = "X"
+toggleButton.TextColor3 = Color3.fromRGB(255,255,255)
+toggleButton.TextSize = 18
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.Parent = frame
+
+toggleButton.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+local canTeleport = true
+
+local function teleportRandomNormal(targetName)
+	if not canTeleport then return end
+	canTeleport = false
+
+	local parentObject = Workspace:FindFirstChild("ClawMachines")
+	if not parentObject then
+		canTeleport = true
+		return
+	end
+
+	for _, targetObject in ipairs(parentObject:GetChildren()) do
+		if targetObject.Name == targetName then
+			local claw = targetObject:FindFirstChild("Claw", true)
+			if claw then
+				local targetCFrame
+				if claw:IsA("Model") and claw.PrimaryPart then
+					targetCFrame = claw.PrimaryPart.CFrame
+				elseif claw:IsA("BasePart") then
+					targetCFrame = claw.CFrame
+				else
+					continue
+				end
+
+				local normals = {}
+				for _, normal in ipairs(targetObject:GetDescendants()) do
+					if normal:IsA("Model") and normal.Name == "Normal" then
+						local root = normal:FindFirstChild("Root")
+						if root and root:IsA("BasePart") then
+							table.insert(normals, root)
+						end
+					end
+				end
+
+				if #normals > 0 then
+					local randomIndex = math.random(1, #normals)
+					normals[randomIndex].CFrame = targetCFrame
+				end
+			end
+		end
+	end
+
+	wait(7)
+	canTeleport = true
+end
+
+button.MouseButton1Click:Connect(function()
+	local targetName = inputBox.Text
+	if targetName ~= "" then
+		teleportRandomNormal(targetName)
+	end
+end)
