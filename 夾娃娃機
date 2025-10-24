@@ -1,0 +1,95 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Workspace = game:GetService("Workspace")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ClawUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 120)
+frame.Position = UDim2.new(0, 100, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.3
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+frame.Active = true
+frame.Draggable = true
+
+local inputBox = Instance.new("TextBox")
+inputBox.Size = UDim2.new(0, 180, 0, 30)
+inputBox.Position = UDim2.new(0, 10, 0, 10)
+inputBox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+inputBox.Font = Enum.Font.SourceSansBold
+inputBox.TextSize = 18
+inputBox.PlaceholderText = "輸入物體名稱"
+inputBox.ClearTextOnFocus = false
+inputBox.Parent = frame
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 180, 0, 30)
+button.Position = UDim2.new(0, 10, 0, 50)
+button.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+button.Text = "傳送全部 Normal"
+button.Parent = frame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 30, 0, 30)
+toggleButton.Position = UDim2.new(1, 0, 0, 0)
+toggleButton.AnchorPoint = Vector2.new(1, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleButton.Text = "X"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = 18
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.Parent = frame
+
+toggleButton.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+local function teleportAllNormals(targetName)
+	local parentObject = Workspace:FindFirstChild("ClawMachines")
+	if not parentObject then return end
+
+	for _, targetObject in ipairs(parentObject:GetChildren()) do
+		if targetObject.Name == targetName then
+			local nodes = targetObject:FindFirstChild("Nodes", true)
+			if nodes then
+				local plushDeposit = nodes:FindFirstChild("PlushDeposit", true)
+				if plushDeposit then
+					local targetCFrame
+					if plushDeposit:IsA("Model") and plushDeposit.PrimaryPart then
+						targetCFrame = plushDeposit.PrimaryPart.CFrame
+					elseif plushDeposit:IsA("BasePart") then
+						targetCFrame = plushDeposit.CFrame
+					else
+						continue
+					end
+
+					for _, normal in ipairs(targetObject:GetDescendants()) do
+						if normal:IsA("Model") and normal.Name == "Normal" then
+							local root = normal:FindFirstChild("Root")
+							if root and root:IsA("BasePart") then
+								root.CFrame = targetCFrame
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+button.MouseButton1Click:Connect(function()
+	local targetName = inputBox.Text
+	if targetName ~= "" then
+		teleportAllNormals(targetName)
+	end
+end)
