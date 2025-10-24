@@ -24,7 +24,7 @@ inputBox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 inputBox.Font = Enum.Font.SourceSansBold
 inputBox.TextSize = 18
-inputBox.PlaceholderText = "輸入物體名稱"
+inputBox.PlaceholderText = "輸入名稱"
 inputBox.Parent = frame
 
 local button = Instance.new("TextButton")
@@ -34,7 +34,7 @@ button.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 button.TextColor3 = Color3.fromRGB(255, 255, 255)
 button.Font = Enum.Font.SourceSansBold
 button.TextSize = 18
-button.Text = "傳送 Normal"
+button.Text = "傳送"
 button.Parent = frame
 
 local toggleButton = Instance.new("TextButton")
@@ -95,7 +95,7 @@ local function teleportRandomNormal(targetName)
 		end
 	end
 
-	wait(3)
+	wait(7)
 	canTeleport = true
 end
 
