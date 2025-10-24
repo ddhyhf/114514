@@ -36,7 +36,7 @@ button.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 button.TextColor3 = Color3.fromRGB(255, 255, 255)
 button.Font = Enum.Font.SourceSansBold
 button.TextSize = 18
-button.Text = "傳送 Normal"
+button.Text = "傳送娃娃到夾子"
 button.Parent = frame
 
 local toggleButton = Instance.new("TextButton")
