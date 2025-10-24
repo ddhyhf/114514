@@ -97,7 +97,7 @@ local function teleportRandomNormal(targetName)
 		end
 	end
 
-	wait(7)
+	wait(10)
 	canTeleport = true
 end
 
