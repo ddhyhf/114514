@@ -1,0 +1,214 @@
+local Players = game:GetService("Players")
+local RS = game:GetService("RunService")
+local VU = game:GetService("VirtualUser")
+local Lighting = game:GetService("Lighting")
+local TS = game:GetService("TweenService")
+local P = Players.LocalPlayer
+
+-- State
+local S = {inCD=false, auto=false, safe=false, cam=false, full=false, hitCD=1, tpDelay=0.05}
+local safePlat, safeOrigPos, rakeConn
+local oldLight = {}
+
+-- GUI colors
+local guiC,textC,lineC = Color3.fromRGB(0,0,0),Color3.fromRGB(255,255,255),Color3.fromRGB(255,255,255)
+
+-- Helpers
+local function charHRP() local c=P.Character or P.CharacterAdded:Wait() return c,c:WaitForChild("HumanoidRootPart") end
+local function clickSound(p)
+    local s=Instance.new("Sound",p)
+    s.SoundId="rbxassetid://9118823107"; s.Volume=1; s:Play()
+    game.Debris:AddItem(s,1)
+end
+
+local function hitRake()
+    local c,hrp=charHRP()
+    local npc=workspace:FindFirstChild("The_Rake")
+    if not npc then return end
+    local h=npc:FindFirstChildOfClass("Humanoid")
+    if not h or h.Health<=0 then return end
+    local nRP=npc:FindFirstChild("HumanoidRootPart")
+    if nRP then
+        local old=hrp.Position
+        hrp.CFrame=CFrame.new(nRP.Position - nRP.CFrame.LookVector*3 + Vector3.new(0,2,0), nRP.Position)
+        task.wait(0.05)
+        VU:Button1Down(Vector2.new(0,0)); VU:Button1Up(Vector2.new(0,0))
+        task.wait(S.tpDelay)
+        hrp.CFrame=CFrame.new(old)
+    end
+end
+
+local function resetToggles()
+    S.auto=false; S.safe=false; S.cam=false; S.full=false
+    if rakeConn then rakeConn:Disconnect() rakeConn=nil end
+    local cam=workspace.CurrentCamera
+    cam.CameraType=Enum.CameraType.Custom
+    if P.Character and P.Character:FindFirstChildOfClass("Humanoid") then
+        cam.CameraSubject=P.Character:FindFirstChildOfClass("Humanoid")
+    end
+    if safePlat then safePlat:Destroy() safePlat=nil end
+    safeOrigPos=nil
+    if oldLight.Brightness then
+        Lighting.Brightness=oldLight.Brightness
+        Lighting.OutdoorAmbient=oldLight.OutdoorAmbient
+        Lighting.FogEnd=oldLight.FogEnd
+    end
+end
+
+-- Create Hub
+local function createHub()
+    if P.PlayerGui:FindFirstChild("ErickzzzHubGui") then P.PlayerGui.ErickzzzHubGui:Destroy() end
+    local SG=Instance.new("ScreenGui",P.PlayerGui); SG.Name="ErickzzzHubGui"
+    local F=Instance.new("Frame",SG)
+    F.Size=UDim2.new(0,180,0,300); F.Position=UDim2.new(0.5,-90,0.5,-150)
+    F.BackgroundColor3=guiC; F.Active=true; F.Draggable=true
+    Instance.new("UICorner",F).CornerRadius=UDim.new(0,10)
+    Instance.new("UIStroke",F).Color=lineC
+
+    local title=Instance.new("TextLabel",F)
+    title.Size=UDim2.new(1,0,0,25); title.BackgroundTransparency=1
+    title.Text="👑 Erickzzz Hub"; title.Font=Enum.Font.GothamBold
+    title.TextColor3=textC; title.TextScaled=true
+
+    local SF=Instance.new("ScrollingFrame",F)
+    SF.Size=UDim2.new(1,0,1,-130); SF.Position=UDim2.new(0,0,0,25)
+    SF.BackgroundTransparency=1; SF.ScrollBarThickness=6
+    local layout=Instance.new("UIListLayout",SF); layout.Padding=UDim.new(0,5)
+
+    local function btn(text)
+        local b=Instance.new("TextButton",SF)
+        b.Size=UDim2.new(1,-10,0,25); b.BackgroundColor3=Color3.fromRGB(30,30,30)
+        b.Text=text; b.TextColor3=textC; b.Font=Enum.Font.GothamBold; b.TextScaled=true
+        Instance.new("UICorner",b).CornerRadius=UDim.new(0,6)
+        Instance.new("UIStroke",b).Color=lineC
+        return b
+    end
+
+    -- Hit The Rake
+    local hitBtn=btn("Hit The Rake")
+    hitBtn.MouseButton1Click:Connect(function()
+        if S.inCD then return end
+        S.inCD=true; clickSound(hitBtn); hitRake()
+        local oldText=hitBtn.Text; hitBtn.Text="COOLDOWN"
+        TS:Create(hitBtn,TweenInfo.new(0.3),{BackgroundColor3=Color3.fromRGB(200,0,0)}):Play()
+        task.wait(S.hitCD)
+        TS:Create(hitBtn,TweenInfo.new(0.3),{BackgroundColor3=Color3.fromRGB(30,30,30)}):Play()
+        hitBtn.Text=oldText; S.inCD=false
+    end)
+
+    -- Auto Hit
+    local autoBtn=btn("Auto Hit: OFF")
+    autoBtn.MouseButton1Click:Connect(function()
+        S.auto=not S.auto
+        if S.auto then
+            autoBtn.Text="Auto Hit: ON"; autoBtn.BackgroundColor3=Color3.fromRGB(0,170,0)
+            spawn(function() while S.auto do hitRake() task.wait(S.hitCD) end end)
+        else autoBtn.Text="Auto Hit: OFF"; autoBtn.BackgroundColor3=Color3.fromRGB(30,30,30) end
+    end)
+
+    -- Safe Mode
+    local safeBtn=btn("Safe Mode 🛡️: OFF")
+    safeBtn.MouseButton1Click:Connect(function()
+        local c,hrp=charHRP()
+        S.safe=not S.safe
+        if S.safe then
+            safeBtn.Text="Safe Mode 🛡️: ON"
+            safeOrigPos=hrp.Position
+            safePlat=Instance.new("Part")
+            safePlat.Size=Vector3.new(50,2,50); safePlat.Anchored=true; safePlat.CanCollide=true
+            safePlat.Transparency=1; safePlat.Position=Vector3.new(hrp.Position.X,hrp.Position.Y-50,hrp.Position.Z)
+            safePlat.Parent=workspace
+            TS:Create(hrp,TweenInfo.new(0.5),{CFrame=CFrame.new(safePlat.Position.X,safePlat.Position.Y+3,safePlat.Position.Z)}):Play()
+        else
+            safeBtn.Text="Safe Mode 🛡️: OFF"
+            if safePlat then safePlat:Destroy() safePlat=nil end
+            if safeOrigPos then TS:Create(hrp,TweenInfo.new(0.5),{CFrame=CFrame.new(safeOrigPos)}):Play() end
+        end
+    end)
+
+    -- Camera Lock
+    local camBtn=btn("Camera: OFF")
+    camBtn.MouseButton1Click:Connect(function()
+        local npc=workspace:FindFirstChild("The_Rake"); local cam=workspace.CurrentCamera
+        if not npc or not npc:FindFirstChild("HumanoidRootPart") then return end
+        local nRP=npc.HumanoidRootPart
+        S.cam=not S.cam
+        if S.cam then
+            camBtn.Text="Camera: ON"; cam.CameraType=Enum.CameraType.Scriptable
+            rakeConn=RS.RenderStepped:Connect(function()
+                if not S.cam then rakeConn:Disconnect() rakeConn=nil return end
+                if P.Character and P.Character:FindFirstChild("HumanoidRootPart") then
+                    cam.CFrame=CFrame.new(nRP.Position - nRP.CFrame.LookVector*8 + Vector3.new(0,4,0), nRP.Position)
+                else resetToggles() end
+            end)
+        else
+            camBtn.Text="Camera: OFF"; cam.CameraType=Enum.CameraType.Custom
+            cam.CameraSubject=P.Character:FindFirstChildOfClass("Humanoid")
+            if rakeConn then rakeConn:Disconnect() rakeConn=nil end
+        end
+    end)
+
+    -- Full Bright
+    local fullBtn=btn("Full Bright: OFF")
+    fullBtn.MouseButton1Click:Connect(function()
+        S.full=not S.full
+        if S.full then
+            fullBtn.Text="Full Bright: ON"
+            oldLight.Brightness=Lighting.Brightness
+            oldLight.OutdoorAmbient=Lighting.OutdoorAmbient
+            oldLight.FogEnd=Lighting.FogEnd
+            Lighting.Brightness=2
+            Lighting.OutdoorAmbient=Color3.fromRGB(255,255,255)
+            Lighting.FogEnd=100000
+        else
+            fullBtn.Text="Full Bright: OFF"
+            if oldLight.Brightness then
+                Lighting.Brightness=oldLight.Brightness
+                Lighting.OutdoorAmbient=oldLight.OutdoorAmbient
+                Lighting.FogEnd=oldLight.FogEnd
+            end
+        end
+    end)
+
+    -- Teleport Delay TextBox
+    local lblTP=Instance.new("TextLabel",F)
+    lblTP.Size=UDim2.new(1,0,0,20); lblTP.Position=UDim2.new(0,0,1,-95)
+    lblTP.BackgroundTransparency=1; lblTP.Text="Set Teleport Delay"
+    lblTP.Font=Enum.Font.GothamBold; lblTP.TextColor3=textC; lblTP.TextScaled=true
+
+    local tbTP=Instance.new("TextBox",F)
+    tbTP.Size=UDim2.new(1,-10,0,25); tbTP.Position=UDim2.new(0,5,1,-75)
+    tbTP.BackgroundColor3=Color3.fromRGB(30,30,30); tbTP.TextColor3=textC
+    tbTP.Font=Enum.Font.GothamBold; tbTP.TextScaled=true; tbTP.Text=tostring(S.tpDelay)
+    Instance.new("UICorner",tbTP).CornerRadius=UDim.new(0,6)
+    tbTP.FocusLost:Connect(function()
+        local val=tonumber(tbTP.Text)
+        if val and val>=0.001 and val<=50 then S.tpDelay=val else tbTP.Text=tostring(S.tpDelay) end
+    end)
+
+    -- Hit Cooldown TextBox
+    local lblCD=Instance.new("TextLabel",F)
+    lblCD.Size=UDim2.new(1,0,0,20); lblCD.Position=UDim2.new(0,0,1,-60)
+    lblCD.BackgroundTransparency=1; lblCD.Text="Set Hit Cooldown"  -- <-- Updated Name
+    lblCD.Font=Enum.Font.GothamBold; lblCD.TextColor3=textC; lblCD.TextScaled=true
+
+    local tb=Instance.new("TextBox",F)
+    tb.Size=UDim2.new(1,-10,0,25); tb.Position=UDim2.new(0,5,1,-35)
+    tb.BackgroundColor3=Color3.fromRGB(30,30,30); tb.TextColor3=textC
+    tb.Font=Enum.Font.GothamBold; tb.TextScaled=true; tb.Text=tostring(S.hitCD)
+    Instance.new("UICorner",tb).CornerRadius=UDim.new(0,6)
+    tb.FocusLost:Connect(function()
+        local val=tonumber(tb.Text)
+        if val and val>0 then S.hitCD=val else tb.Text=tostring(S.hitCD) end
+    end)
+end
+
+-- Initial GUI
+createHub()
+
+-- Reset toggles & recreate GUI on respawn
+P.CharacterAdded:Connect(function()
+    resetToggles()
+    task.wait(0.5)
+    createHub()
+end)
