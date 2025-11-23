@@ -1,0 +1,228 @@
+-- Anti-Rake Multi-Method Defense (LocalScript -> StarterPlayerScripts)
+
+local Players = game:GetService("Players")
+local PhysicsService = game:GetService("PhysicsService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- ========= CONFIG =========
+local MONSTER_NAME = "The_Rake"     -- 怪物模型名稱
+local DISTANCE_THRESHOLD = 4        -- 伺服器判距離常見閾值（若攻擊範圍不一樣可微調）
+local DISTANCE_OFFSET = Vector3.new(0, 50, 0) -- 伺服器看到你的偏移量（越大越保險）
+local RAY_BLOCK_SIZE = Vector3.new(1, 1, 1)   -- 隱形阻擋器基本尺寸（會依距離伸縮）
+local REMOTE_NAMES = {"DamageEvent", "DamageRemote", "RemoteDamage", "RakeDamage"} -- 常見遠端攻擊名（可加）
+local PLAYER_GROUP = "AntiRake_Player"
+local MONSTER_GROUP = "AntiRake_Monster"
+local RAYBLOCK_TAG = "__ANTI_RAKE_RAYBLOCK__" -- 標記用
+local PROTECT_LOOP_RATE = 0.12 -- 主迴圈等待時間
+-- ==========================
+
+-- 確保碰撞群組存在並設定互不碰撞（玩家 vs 怪物）
+pcall(function() PhysicsService:CreateCollisionGroup(PLAYER_GROUP) end)
+pcall(function() PhysicsService:CreateCollisionGroup(MONSTER_GROUP) end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable(PLAYER_GROUP, MONSTER_GROUP, false) end)
+
+-- 幫角色/怪物設定 CollisionGroup
+local function SetCollisionGroupForDescendants(root, groupName)
+    if not root then return end
+    for _, part in ipairs(root:GetDescendants()) do
+        if part:IsA("BasePart") then
+            pcall(function() PhysicsService:SetPartCollisionGroup(part, groupName) end)
+        end
+    end
+end
+
+-- 把玩家目前角色設為 PLAYER_GROUP
+local function ProtectPlayerCharacter(char)
+    if not char then return end
+    SetCollisionGroupForDescendants(char, PLAYER_GROUP)
+end
+
+-- 搜尋並把指定怪物設定成 MONSTER_GROUP
+local function ProtectMonster(monster)
+    if not monster then return end
+    SetCollisionGroupForDescendants(monster, MONSTER_GROUP)
+end
+
+-- 建立或更新在怪物和玩家間的 Raycast 阻擋器（anchored parts）
+local rayblocks = {} -- map: monster -> list of blocks
+
+local function CreateOrUpdateRayBlocks(monster, charRoot)
+    if not monster or not charRoot then return end
+    -- 確保 table
+    rayblocks[monster] = rayblocks[monster] or {}
+
+    -- 找怪物主位置 (HumanoidRootPart / PrimaryPart / first BasePart)
+    local mRoot = monster:FindFirstChild("HumanoidRootPart") or monster.PrimaryPart
+    if not mRoot then
+        for _, p in ipairs(monster:GetDescendants()) do
+            if p:IsA("BasePart") then mRoot = p; break end
+        end
+    end
+    if not mRoot then return end
+
+    -- 我們只需要一個阻擋器放在 monster->player 中點
+    local existing = rayblocks[monster][1]
+    local from = mRoot.Position
+    local to = charRoot.Position
+    local mid = (from + to) / 2
+    local dist = (from - to).Magnitude
+    local size = Vector3.new( math.max(0.5, RAY_BLOCK_SIZE.X), math.max(0.5, RAY_BLOCK_SIZE.Y), math.max(0.5, dist) )
+
+    if not existing or not existing.Parent then
+        local block = Instance.new("Part")
+        block.Name = RAYBLOCK_TAG
+        block.Size = size
+        block.Anchored = true
+        block.CanCollide = true          -- 使 Raycast/線段會先撞到它
+        block.Transparency = 1          -- 透明，不影響畫面
+        block.CastShadow = false
+        block.CanQuery = true
+        block.CanTouch = false
+        block.Parent = workspace
+        rayblocks[monster][1] = block
+        existing = block
+    end
+
+    -- 擺放與朝向
+    existing.Size = size
+    existing.CFrame = CFrame.new(mid, to) * CFrame.Angles(math.rad(90),0,0) -- 方向調整
+    -- 把阻擋器設成可被怪物和世界打到，但不影響玩家（把 block 設成 MONSTER_GROUP）
+    pcall(function() PhysicsService:SetPartCollisionGroup(existing, MONSTER_GROUP) end)
+end
+
+-- 清理不存在的阻擋器
+local function CleanupRayBlocks()
+    for m, list in pairs(rayblocks) do
+        if not m or not m.Parent then
+            for _, b in ipairs(list) do
+                if b and b.Parent then b:Destroy() end
+            end
+            rayblocks[m] = nil
+        end
+    end
+end
+
+-- Anti-distance: 當怪物靠近時，短暫改變伺服器看到的位置（微移但盡量快速還原）
+-- 注意：這個技巧在某些伺服器可能需微調 OFFSET 與 timing
+local function BrieflyOffsetServerPosition(hrp, offset)
+    -- 微妙技巧：在短秒內把 hrp.CFrame 設為 offset 位置（伺服器會讀到）
+    -- 然後立刻還原。視遊戲而定，這能讓伺服器判斷出你在安全距離外。
+    if not hrp or not hrp.Parent then return end
+    local ok, old = pcall(function() return hrp.CFrame end)
+    if not ok then return end
+    local oldCF = old
+    -- set to offset
+    pcall(function() hrp.CFrame = oldCF + offset end)
+    -- very short wait then restore
+    task.delay(0.03, function()
+        if hrp and hrp.Parent then
+            pcall(function() hrp.CFrame = oldCF end)
+        end
+    end)
+end
+
+-- 嘗試攔截常見 RemoteEvent 名稱（如果遊戲用 FireClient 傳傷害）
+-- 我們只是監聽並忽略資料（但伺服器仍可後設 health），所以搭配 Health 修復
+local clientRemotes = {}
+local function HookClientRemotes(toolbox)
+    -- 搜尋 workspace / ReplicatedStorage / tool 等常見路徑
+    local searchRoots = {workspace, game:GetService("ReplicatedStorage"), player.PlayerGui, player.Backpack}
+    for _, root in ipairs(searchRoots) do
+        for _, obj in ipairs(root:GetDescendants()) do
+            if obj:IsA("RemoteEvent") and table.find(REMOTE_NAMES, obj.Name) then
+                if not clientRemotes[obj] then
+                    clientRemotes[obj] = true
+                    pcall(function()
+                        obj.OnClientEvent:Connect(function(...) 
+                            -- 攔截並忽略（你可以在這裡做進一步處理）
+                            -- print("Intercepted RemoteEvent: ", obj:GetFullName())
+                        end)
+                    end)
+                end
+            end
+        end
+    end
+end
+
+-- 健康補救：血被扣就馬上補滿（最後保險）
+local function SetupHealthRestore(hum)
+    if not hum then return end
+    if hum.__anti_restore then return end
+    hum.__anti_restore = true
+    hum.HealthChanged:Connect(function(hp)
+        if not hum or not hum.Parent then return end
+        if hp < hum.MaxHealth then
+            -- 馬上補滿
+            pcall(function() hum.Health = hum.MaxHealth end)
+        end
+    end)
+end
+
+-- 主迴圈：偵測最近的 The_Rake、應用各項防護
+task.spawn(function()
+    while task.wait(PROTECT_LOOP_RATE) do
+        if not player or not player.Character then continue end
+        local char = player.Character
+        local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hrp then
+            -- collision group protect (player)
+            ProtectPlayerCharacter(char)
+            if hum then SetupHealthRestore(hum) end
+
+            -- 搜怪物（workspace 中所有方法）
+            local found = nil
+            -- 1. FindFirstChild
+            found = found or workspace:FindFirstChild(MONSTER_NAME)
+            -- 2. FindFirstChildWhichIsA (Model)
+            if not found then
+                local m = workspace:FindFirstChildWhichIsA("Model")
+                if m and m.Name == MONSTER_NAME then found = m end
+            end
+            -- 3. GetChildren 遍歷
+            if not found then
+                for _, c in ipairs(workspace:GetChildren()) do
+                    if c.Name == MONSTER_NAME then found = c; break end
+                end
+            end
+            -- 4. GetDescendants 遍歷
+            if not found then
+                for _, d in ipairs(workspace:GetDescendants()) do
+                    if d.Name == MONSTER_NAME then found = d; break end
+                end
+            end
+
+            if found then
+                -- monster -> 設群組
+                ProtectMonster(found)
+                -- 嘗試 Hook remote events around
+                HookClientRemotes(found)
+
+                -- Raycast blocker
+                CreateOrUpdateRayBlocks(found, hrp)
+
+                -- 如果距離真的接近，短暫偏移伺服器位置（避免距離判定）
+                local mroot = found:FindFirstChild("HumanoidRootPart") or found.PrimaryPart
+                if mroot then
+                    local dist = (mroot.Position - hrp.Position).Magnitude
+                    if dist <= (DISTANCE_THRESHOLD + 1.5) then -- 若接近閾值就偏移
+                        BrieflyOffsetServerPosition(hrp, DISTANCE_OFFSET)
+                    end
+                end
+            end
+
+            CleanupRayBlocks()
+        end
+    end
+end)
+
+-- 清除阻擋器與連線於離開／死亡
+player.CharacterRemoving:Connect(function(char)
+    -- destroy rayblocks related to old character
+    for m, list in pairs(rayblocks) do
+        for _, b in ipairs(list) do if b and b.Parent then b:Destroy() end end
+    end
+    rayblocks = {}
+end)
